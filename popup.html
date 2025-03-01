@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>LinkedIn Job Automation</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 p-4">
+  <div class="container mx-auto max-w-md">
+    <h1 class="text-2xl font-bold mb-4">LinkedIn Job Automation</h1>
+    
+    <input type="text" id="keywords" placeholder="Job Keywords" class="w-full mb-2 p-2 rounded">
+    <input type="text" id="location" placeholder="Location" class="w-full mb-2 p-2 rounded">
+    <input type="number" id="experience" placeholder="Years of Experience" class="w-full mb-2 p-2 rounded">
+    <input type="number" id="expectedSalary" placeholder="Expected Salary" class="w-full mb-2 p-2 rounded">
+    <input type="number" id="totalJobsToApply" placeholder="Number of Jobs to Apply" class="w-full mb-2 p-2 rounded">
+    
+    <!-- Additional fields for better context -->
+    <!-- <textarea id="skills" placeholder="Your Skills (comma separated)" class="w-full mb-2 p-2 rounded" rows="2"></textarea>
+    <textarea id="jobPreferences" placeholder="Job Preferences (e.g., remote, on-site, hybrid)" class="w-full mb-2 p-2 rounded" rows="2"></textarea>
+    <input type="text" id="noticePeriod" placeholder="Notice Period (e.g., Immediate, 30 days)" class="w-full mb-2 p-2 rounded">
+    <textarea id="workHistory" placeholder="Brief Work History" class="w-full mb-2 p-2 rounded" rows="3"></textarea>
+    <input type="text" id="preferredLocation" placeholder="Preferred Location" class="w-full mb-2 p-2 rounded"> -->
+
+    <button id="startButton" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Start Automation</button>
+    <button id="stopButton" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">Stop Automation</button>
+    <div id="progress" class="mt-4 hidden">
+      <div class="bg-gray-200 rounded-full h-4">
+        <div id="progressBar" class="bg-blue-500 h-4 rounded-full" style="width: 0%"></div>
+      </div>
+      <p id="progressText" class="text-center mt-2">Applied: 0 jobs</p>
+    </div>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>
