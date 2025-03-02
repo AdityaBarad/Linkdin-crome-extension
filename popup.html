@@ -11,15 +11,25 @@
     <input type="text" id="keywords" placeholder="Job Keywords" class="w-full mb-2 p-2 rounded">
     <input type="text" id="location" placeholder="Location" class="w-full mb-2 p-2 rounded">
     <input type="number" id="experience" placeholder="Years of Experience" class="w-full mb-2 p-2 rounded">
-    <input type="number" id="expectedSalary" placeholder="Expected Salary" class="w-full mb-2 p-2 rounded">
+    <input type="number" id="currentSalary" placeholder="Current Salary/CTC" class="w-full mb-2 p-2 rounded">
+    <input type="number" id="expectedSalary" placeholder="Expected Salary/CTC" class="w-full mb-2 p-2 rounded">
     <input type="number" id="totalJobsToApply" placeholder="Number of Jobs to Apply" class="w-full mb-2 p-2 rounded">
     
-    <!-- Additional fields for better context -->
-    <!-- <textarea id="skills" placeholder="Your Skills (comma separated)" class="w-full mb-2 p-2 rounded" rows="2"></textarea>
-    <textarea id="jobPreferences" placeholder="Job Preferences (e.g., remote, on-site, hybrid)" class="w-full mb-2 p-2 rounded" rows="2"></textarea>
-    <input type="text" id="noticePeriod" placeholder="Notice Period (e.g., Immediate, 30 days)" class="w-full mb-2 p-2 rounded">
-    <textarea id="workHistory" placeholder="Brief Work History" class="w-full mb-2 p-2 rounded" rows="3"></textarea>
-    <input type="text" id="preferredLocation" placeholder="Preferred Location" class="w-full mb-2 p-2 rounded"> -->
+    <!-- Date posted dropdown -->
+    <select id="datePosted" class="w-full mb-2 p-2 rounded">
+      <option value="">Any time</option>
+      <option value="r2592000">Past month</option>
+      <option value="r604800">Past week</option>
+      <option value="r86400">Past 24 hours</option>
+    </select>
+
+    <!-- Replace multiple select with single select for workplace -->
+    <select id="workplaceType" class="w-full mb-2 p-2 rounded">
+      <option value="">Any workplace</option>
+      <option value="1">On-site</option>
+      <option value="3">Hybrid</option>
+      <option value="2">Remote</option>
+    </select>
 
     <button id="startButton" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Start Automation</button>
     <button id="stopButton" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">Stop Automation</button>

@@ -13,7 +13,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const formData = {
       keywords: document.getElementById('keywords').value,
       location: document.getElementById('location').value,
+      datePosted: document.getElementById('datePosted').value,
+      workplaceType: document.getElementById('workplaceType').value, // Changed to single value
       experience: document.getElementById('experience').value || "0",
+      currentSalary: document.getElementById('currentSalary').value || "0",
       expectedSalary: document.getElementById('expectedSalary').value || "0",
       totalJobsToApply: document.getElementById('totalJobsToApply').value || "5"
     };

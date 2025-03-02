@@ -48,7 +48,8 @@ async function main(data) {
     await navigateToJobs();
     
     logToBackground('Content: Searching for jobs');
-    await searchJobs(data.keywords, data.location);
+    // Pass the entire data object to searchJobs
+    await searchJobs(data);
     
     logToBackground('Content: Starting job applications');
     await applyToJobs(data);
@@ -64,20 +65,20 @@ async function navigateToJobs() {
     // Don't navigate if already on jobs page
     if (window.location.href.includes('linkedin.com/jobs')) {
       logToBackground('Content: Already on jobs page');
-      await new Promise(r => setTimeout(r, 2000));
+      await new Promise(r => setTimeout(r, 1000));
       return;
     }
 
     logToBackground('Content: Navigating to jobs page');
     window.location.href = 'https://www.linkedin.com/jobs/';
-    await new Promise(r => setTimeout(r, 5000));
+    await new Promise(r => setTimeout(r, 2000));
 
     // Wait for either the modern or legacy search box
     const searchBox = await waitForAnyElement([
       '[id^="jobs-search-box-keyword-id"]',
       '.jobs-search-box__text-input',
       '#global-nav-search'
-    ], 30000);
+    ], 10000);
 
     logToBackground('Content: Found search box:', searchBox.id);
     await new Promise(r => setTimeout(r, 2000));
@@ -87,10 +88,11 @@ async function navigateToJobs() {
   }
 }
 
-async function searchJobs(keywords, location) {
+// Update the searchJobs function signature to accept data object
+async function searchJobs(data) {
   logToBackground('Content: Starting job search');
   try {
-    // Try different possible selectors for search inputs
+    // Update to use data.keywords and data.location
     const keywordSelectors = [
       '[id^="jobs-search-box-keyword-id"]',
       '.jobs-search-box__text-input[aria-label*="Search"]',
@@ -115,11 +117,11 @@ async function searchJobs(keywords, location) {
     await clearField(locationInput);
 
     // Type with delay between characters
-    await typeSlowly(keywordInput, keywords);
-    await new Promise(r => setTimeout(r, 2000));
+    await typeIntoField(keywordInput, data.keywords);
+    await new Promise(r => setTimeout(r, 1000));
     
-    await typeSlowly(locationInput, location);
-    await new Promise(r => setTimeout(r, 2000));
+    await typeIntoField(locationInput, data.location);
+    await new Promise(r => setTimeout(r, 1000));
 
     // Try multiple ways to trigger the search
     const searchTriggers = [
@@ -160,7 +162,7 @@ async function searchJobs(keywords, location) {
     logToBackground('Content: Waiting for search results...');
     
     // Wait for job list and first job card
-    const jobList = await waitForAnyElement(resultSelectors, 60000);
+    const jobList = await waitForAnyElement(resultSelectors, 10000);
     await new Promise(r => setTimeout(r, 5000));
 
     // Try to find and click the Easy Apply filter
@@ -179,6 +181,145 @@ async function searchJobs(keywords, location) {
       await new Promise(r => setTimeout(r, 3000));
     } else {
       logToBackground('Content: Easy Apply filter not found');
+    }
+
+    // After clicking Easy Apply filter, add date posted filter
+    if (data.datePosted) {
+      logToBackground('Content: Applying date posted filter');
+      
+      // Click the date posted filter button
+      const dateFilterButton = await waitForAnyElement([
+        '#searchFilter_timePostedRange',
+        'button[aria-label*="Date posted filter"]'
+      ]);
+      
+      if (dateFilterButton) {
+        await dateFilterButton.click();
+        await new Promise(r => setTimeout(r, 1000));
+
+        // Select the appropriate radio button
+        const dateRadio = await waitForElement(`#timePostedRange-${data.datePosted}`);
+        if (dateRadio) {
+          await dateRadio.click();
+          await new Promise(r => setTimeout(r, 1000));
+
+          // Find and click the "Show results" button with valid selectors
+          const showResultsSelectors = [
+            'button[aria-label="Apply current filter to show results"]',
+            '.artdeco-button--primary.ml2[type="button"]',
+            '.artdeco-button--2.artdeco-button--primary',
+            'button.artdeco-button--primary:not([aria-label*="filter"])'
+          ];
+
+          // Look for any button containing "Show results" text
+          const allButtons = document.querySelectorAll('button');
+          const showResultsButton = Array.from(allButtons).find(button => 
+            button.textContent.trim().toLowerCase().includes('show results')
+          ) || await waitForAnyElement(showResultsSelectors);
+
+          if (showResultsButton) {
+            logToBackground('Content: Clicking Show results button');
+            await showResultsButton.click();
+            await new Promise(r => setTimeout(r, 2000));
+          } else {
+            logToBackground('Content: Show results button not found');
+          }
+        } else {
+          logToBackground('Content: Date filter option not found');
+        }
+      } else {
+        logToBackground('Content: Date filter button not found');
+      }
+    }
+
+    // Add workplace type filter
+    if (data.workplaceTypes && data.workplaceTypes.length > 0) {
+      logToBackground('Content: Applying workplace type filter');
+      
+      // Click the workplace type filter button
+      const workplaceFilterButton = await waitForAnyElement([
+        '#searchFilter_workplaceType',
+        'button[aria-label*="Remote filter"]'
+      ]);
+      
+      if (workplaceFilterButton) {
+        await workplaceFilterButton.click();
+        await new Promise(r => setTimeout(r, 1000));
+
+        // Select the chosen workplace types
+        for (const workplaceType of data.workplaceTypes) {
+          const checkbox = await waitForElement(`#workplaceType-${workplaceType}`);
+          if (checkbox && !checkbox.checked) {
+            await checkbox.click();
+            await new Promise(r => setTimeout(r, 500));
+          }
+        }
+
+        // Click the "Show results" button
+        const showResultsButton = await waitForAnyElement([
+          'button[aria-label="Apply current filter to show results"]',
+          '.artdeco-button--primary.ml2[type="button"]',
+          'button.artdeco-button--primary:not([aria-label*="filter"])'
+        ]);
+
+        if (showResultsButton) {
+          logToBackground('Content: Clicking Show results button for workplace filter');
+          await showResultsButton.click();
+          await new Promise(r => setTimeout(r, 2000));
+        }
+      }
+    }
+
+    // Add workplace type filter after date filter
+    if (data.workplaceType) {
+      logToBackground('Content: Applying workplace type filter');
+      
+      // Click the workplace type filter button
+      const workplaceFilterButton = await waitForAnyElement([
+        '#searchFilter_workplaceType',
+        'button[aria-label*="Remote filter"]',
+        'button[aria-label*="Workplace"]'
+      ]);
+      
+      if (workplaceFilterButton) {
+        await workplaceFilterButton.click();
+        await new Promise(r => setTimeout(r, 2000)); // Increased delay
+
+        // Try multiple selectors for the workplace options
+        const workplaceSelectors = [
+          `#workplaceType-${data.workplaceType}`,
+          `input[name="remote-filter-value"][value="${data.workplaceType}"]`,
+          `input[value="${data.workplaceType}"].search-reusables__select-input`
+        ];
+
+        let workplaceOption = null;
+        for (const selector of workplaceSelectors) {
+          workplaceOption = await waitForElement(selector, 5000).catch(() => null);
+          if (workplaceOption) break;
+        }
+
+        if (workplaceOption) {
+          logToBackground('Content: Found workplace option');
+          await workplaceOption.click();
+          await new Promise(r => setTimeout(r, 1000));
+
+          // Use the new function to find and click the show results button
+          const showResultsButton = await findShowResultsButton();
+          
+          if (showResultsButton) {
+            logToBackground('Content: Clicking Show results button');
+            await showResultsButton.click();
+            await new Promise(r => setTimeout(r, 2000));
+          } else {
+            logToBackground('Content: Show results button not found, trying alternative approach');
+            // Alternative approach: Press Enter key
+            workplaceOption.focus();
+            await simulateEnterKey(workplaceOption);
+          }
+        } else {
+          logToBackground('Content: Workplace option not found');
+        }
+      }
     }
 
     // Wait for results with the updated filter
@@ -246,6 +387,13 @@ async function processJobCard(jobCard, data) {
     // Wait for any existing job details panel to close
     await new Promise(r => setTimeout(r, 1000));
 
+    // Check if job is already applied
+    const isApplied = await checkIfJobApplied(jobCard);
+    if (isApplied) {
+      logToBackground('Content: Job already applied, skipping');
+      throw new Error('Job already applied');
+    }
+
     // Find the clickable link or title within the job card
     const jobLink = await findClickableElement(jobCard);
     if (!jobLink) {
@@ -259,60 +407,251 @@ async function processJobCard(jobCard, data) {
     // Click the job title/link
     logToBackground('Content: Clicking job card');
     await jobLink.click();
-    await new Promise(r => setTimeout(r, 2000));
+    
+    // Increased wait time for initial load
+    await new Promise(r => setTimeout(r, 3000));
 
-    // Wait for job details panel with multiple selectors
-    const detailsSelectors = [
+    // Wait for job details panel with multiple possible selectors
+    const detailsPanelSelectors = [
       '.jobs-unified-top-card',
-      '.jobs-search__job-details',
       '.jobs-details',
       '[data-job-id]',
       '.jobs-details__main-content'
     ];
 
-    logToBackground('Content: Waiting for job details panel');
-    const detailsPanel = await waitForAnyElement(detailsSelectors, 15000);
+    let detailsPanel = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      logToBackground('Content: Attempting to find details panel, attempt', attempt + 1);
+      
+      for (const selector of detailsPanelSelectors) {
+        const element = document.querySelector(selector);
+        if (element && element.offsetParent !== null) {
+          detailsPanel = element;
+          break;
+        }
+      }
+
+      if (detailsPanel) break;
+      
+      // If not found, wait and try again
+      await new Promise(r => setTimeout(r, 2000));
+    }
+
     if (!detailsPanel) {
-      throw new Error('Job details panel not loaded');
+      throw new Error('Job details panel not loaded after multiple attempts');
     }
 
-    // Wait for apply button with multiple selectors
-    const applyButtonSelectors = [
-      '.jobs-apply-button',
-      'button[aria-label*="Apply"]',
-      'button[aria-label*="Easy Apply"]',
-      '.jobs-s-apply button'
-    ];
-
-    logToBackground('Content: Waiting for apply button');
-    const applyButton = await waitForAnyElement(applyButtonSelectors, 8000);
-    if (!applyButton) {
-      throw new Error('No apply button found');
-    }
-
-    // Click apply button
-    logToBackground('Content: Clicking apply button');
-    await applyButton.click();
+    logToBackground('Content: Job details panel found, waiting for content to settle');
     await new Promise(r => setTimeout(r, 2000));
 
-    // Wait for application modal
-    const modalSelectors = [
-      '.jobs-easy-apply-modal',
-      '[aria-label*="Apply"]',
-      '[role="dialog"]'
-    ];
-
-    const modal = await waitForAnyElement(modalSelectors, 10000);
-    if (!modal) {
-      throw new Error('Application modal not opened');
+    // Wait specifically for the Easy Apply button container
+    const easyApplyContainer = await waitForElement('.jobs-s-apply.jobs-s-apply--fadein');
+    if (!easyApplyContainer) {
+      throw new Error('Easy Apply button container not found');
     }
 
-    // Process the application form
+    // Find the Easy Apply button within the container
+    const easyApplyButton = await waitForElement(
+      '.jobs-s-apply .jobs-apply-button--top-card button.jobs-apply-button', 
+      5000
+    );
+
+    if (!easyApplyButton) {
+      throw new Error('Easy Apply button not found');
+    }
+
+    // Verify button state
+    const buttonText = easyApplyButton.textContent.trim().toLowerCase();
+    const ariaLabel = easyApplyButton.getAttribute('aria-label')?.toLowerCase() || '';
+    
+    if (buttonText.includes('applied') || ariaLabel.includes('applied')) {
+      logToBackground('Content: Job already applied (button state), skipping');
+      throw new Error('Job already applied');
+    }
+
+    logToBackground('Content: Clicking Easy Apply button');
+    await easyApplyButton.click();
+    await new Promise(r => setTimeout(r, 2000));
+
+    // Wait for the application modal
+    const modalSelectors = [
+      '.jobs-easy-apply-modal',
+      '[data-test-modal-id="easy-apply-modal"]',
+      '[role="dialog"][aria-label*="apply"]'
+    ];
+
+    const modal = await waitForAnyElement(modalSelectors, 5000);
+    if (!modal) {
+      throw new Error('Application modal not found');
+    }
+
+    // Start the application process
+    logToBackground('Content: Starting application process');
     await processApplicationForm(data);
 
+    // Additional wait after form processing
+    await new Promise(r => setTimeout(r, 2000));
+
+    // Handle any final popups
+    // await handlePopups();
+
+    logToBackground('Content: Job application completed');
+    return true;
   } catch (error) {
     logToBackground('Content: Error in processJobCard:', error.message);
     throw error;
+  }
+}
+
+// Add new function to verify Easy Apply status
+async function verifyEasyApplyJob(detailsPanel) {
+  try {
+    // Multiple ways to detect Easy Apply
+    const easyApplyIndicators = [
+      // Direct Easy Apply button
+      'button.jobs-apply-button',
+      'button[aria-label*="Easy Apply"]',
+      // Easy Apply text indicators
+      '.jobs-unified-top-card__easy-apply-label',
+      '.jobs-apply-button--top-card',
+      '[data-test-job-card-easy-apply]'
+    ];
+
+    // Check each indicator
+    for (const selector of easyApplyIndicators) {
+      const indicator = detailsPanel.querySelector(selector);
+      if (indicator && indicator.offsetParent !== null) {
+        // Additional verification for buttons
+        if (indicator.tagName === 'BUTTON') {
+          const text = indicator.textContent.toLowerCase();
+          const ariaLabel = indicator.getAttribute('aria-label')?.toLowerCase() || '';
+          
+          // Skip if it shows as already applied
+          if (text.includes('applied') || ariaLabel.includes('applied')) {
+            continue;
+          }
+          
+          // Verify it's an Easy Apply button
+          if (text.includes('easy apply') || ariaLabel.includes('easy apply')) {
+            return true;
+          }
+        } else {
+          // For non-button indicators, just check visibility
+          return true;
+        }
+      }
+    }
+
+    return false;
+  } catch (error) {
+    logToBackground('Content: Error verifying Easy Apply status:', error);
+    return false;
+  }
+}
+
+// Add new function to verify we're in the application flow
+async function verifyApplicationFlow(modal) {
+  try {
+    // Check for common elements in the application flow
+    const applicationFlowIndicators = [
+      // Form elements
+      'form.jobs-easy-apply-form',
+      '.jobs-easy-apply-content',
+      // Progress indicator
+      '.artdeco-completeness-meter-linear',
+      // Common form fields
+      'input[name*="apply"]',
+      'select[name*="apply"]',
+      // Submit/Next buttons
+      'button[aria-label*="Submit"]',
+      'button[aria-label*="Continue"]'
+    ];
+
+    for (const selector of applicationFlowIndicators) {
+      const indicator = modal.querySelector(selector);
+      if (indicator && indicator.offsetParent !== null) {
+        return true;
+      }
+    }
+
+    return false;
+  } catch (error) {
+    logToBackground('Content: Error verifying application flow:', error);
+    return false;
+  }
+}
+
+// Add new function to check if job is already applied
+async function checkIfJobApplied(jobCard) {
+  try {
+    // Check for "Applied" text or indicators within the job card
+    const appliedIndicators = [
+      '.jobs-applied-badge',
+      '.artdeco-inline-feedback--success',
+      '.jobs-search-results__list-item--applied',
+      '[data-test-applied-indicator]'
+    ];
+
+    for (const selector of appliedIndicators) {
+      const indicator = jobCard.querySelector(selector);
+      if (indicator) return true;
+    }
+
+    // Check for "Applied" text in any element
+    const cardText = jobCard.textContent.toLowerCase();
+    if (cardText.includes('applied') || cardText.includes('you\'ve applied')) {
+      return true;
+    }
+
+    return false;
+  } catch (error) {
+    logToBackground('Content: Error checking if job applied:', error);
+    return false; // If error checking, assume not applied
+  }
+}
+
+// Add new function to find the correct apply button
+async function findApplyButton() {
+  const applyButtonSelectors = [
+    // Easy Apply specific selectors
+    'button.jobs-apply-button:not([disabled])',
+    'button[aria-label="Easy Apply to this job"]',
+    // General apply button selectors
+    'button.jobs-apply-button',
+    'button[aria-label*="Easy Apply"]',
+    '.jobs-s-apply button'
+  ];
+
+  try {
+    const buttons = document.querySelectorAll(
+      applyButtonSelectors.join(',')
+    );
+
+    for (const button of buttons) {
+      if (!button.offsetParent || button.disabled) continue;
+
+      const buttonText = button.textContent.toLowerCase();
+      const ariaLabel = button.getAttribute('aria-label')?.toLowerCase() || '';
+
+      // Skip if button indicates already applied
+      if (buttonText.includes('applied') || 
+          ariaLabel.includes('applied') ||
+          button.closest('[data-test-applied-indicator]')) {
+        continue;
+      }
+
+      // Check specifically for Easy Apply buttons
+      if ((buttonText.includes('easy apply') || ariaLabel.includes('easy apply')) &&
+          !buttonText.includes('applied') && 
+          !ariaLabel.includes('applied')) {
+        return button;
+      }
+    }
+
+    return null;
+  } catch (error) {
+    logToBackground('Content: Error finding apply button:', error);
+    return null;
   }
 }
 
@@ -347,20 +686,165 @@ async function processApplicationForm(data) {
       // Wait for form fields to be visible
       await new Promise(r => setTimeout(r, 2000));
       
+      // Check and handle any popup dialogs
+      // await handlePopups();
+      
       logToBackground('Content: Filling form fields');
       await fillFormFields(data);
       
+      // Wait for any animations to complete
+      await new Promise(r => setTimeout(r, 1000));
+
       logToBackground('Content: Looking for next/submit button');
-      isCompleted = await clickNextOrSubmit();
+      const result = await clickNextOrSubmit();
       
-      attempts++;
-      await new Promise(r => setTimeout(r, 2000));
+      if (result.modalClosed) {
+        logToBackground('Content: Application completed');
+        isCompleted = true;
+        break;
+      } else if (result.clicked) {
+        logToBackground('Content: Proceeding to next step');
+        // Wait longer after clicking next to ensure new form loads
+        await new Promise(r => setTimeout(r, 3000));
+      } else {
+        logToBackground('Content: No clickable next/submit button found');
+        attempts++;
+      }
+      
+      // Check for popups again after submission
+      // await handlePopups();
+      
     } catch (error) {
       logToBackground('Content: Form processing error:', error.message);
       break;
     }
   }
 }
+
+async function clickNextOrSubmit() {
+  const buttonSelectors = [
+    // Exact selector for the button you provided
+    'button[data-easy-apply-next-button]',
+    'button[data-live-test-easy-apply-next-button]',
+    'button[aria-label="Continue to next step"]',
+    // Backup selectors
+    'button.artdeco-button--primary[type="button"]',
+    'button.artdeco-button--2.artdeco-button--primary',
+    'button[aria-label="Submit application"]',
+    'button[aria-label="Review your application"]'
+  ];
+
+  try {
+    // Check if modal is still open
+    const modal = document.querySelector('.jobs-easy-apply-modal');
+    if (!modal) {
+      return { modalClosed: true, clicked: false };
+    }
+
+    // Try each button selector
+    for (const selector of buttonSelectors) {
+      const buttons = document.querySelectorAll(selector);
+      for (const button of buttons) {
+        // Verify button is visible, enabled and has correct text
+        if (button.offsetParent !== null && 
+            !button.disabled && 
+            !button.getAttribute('aria-label')?.includes('Dismiss')) {
+          
+          const buttonText = button.textContent.trim().toLowerCase();
+          const buttonSpan = button.querySelector('.artdeco-button__text');
+          const spanText = buttonSpan ? buttonSpan.textContent.trim().toLowerCase() : '';
+          
+          logToBackground('Content: Found button:', buttonText || spanText);
+
+          // Check if it's a next/submit/review button
+          if (buttonText.includes('next') || 
+              spanText.includes('next') || 
+              buttonText.includes('submit') || 
+              buttonText.includes('review') ||
+              buttonText.includes('continue')) {
+            
+            try {
+              logToBackground('Content: Attempting to click button');
+              // Try multiple click methods
+              try {
+                await button.click();
+              } catch {
+                // Fallback to mousedown/mouseup events
+                button.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+                button.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+                button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+              }
+              
+              // Wait longer for the click to take effect
+              await new Promise(r => setTimeout(r, 3000));
+
+              // Check if modal closed
+              const modalStillOpen = document.querySelector('.jobs-easy-apply-modal');
+              if (!modalStillOpen) {
+                return { modalClosed: true, clicked: true };
+              }
+
+              // Check if we moved to a new step (success)
+              const hasError = document.querySelector('.artdeco-inline-feedback--error');
+              if (!hasError) {
+                return { modalClosed: false, clicked: true };
+              }
+            } catch (err) {
+              logToBackground('Content: Error clicking button:', err);
+              continue; // Try next button if this one fails
+            }
+          }
+        }
+      }
+    }
+
+    return { modalClosed: false, clicked: false };
+  } catch (error) {
+    logToBackground('Content: Error in clickNextOrSubmit:', error);
+    return { modalClosed: false, clicked: false };
+  }
+}
+
+// Add new function to handle popups
+// async function handlePopups() {
+//   try {
+//     // Multiple selectors for close buttons
+//     const closeButtonSelectors = [
+//       'button[aria-label="Dismiss"]',
+//       'button[aria-label="Close"]',
+//       'button.artdeco-modal__dismiss',
+//       'button.artdeco-button--circle',
+//       // Look for button containing the close SVG
+//       'button:has(svg[data-test-icon="close-medium"])',
+//       // Broader selectors as fallback
+//       'button.artdeco-button:has(svg)',
+//       '[aria-label="Dismiss"] button',
+//       '[role="dialog"] button:has(svg)'
+//     ];
+
+//     for (const selector of closeButtonSelectors) {
+//       const closeButtons = document.querySelectorAll(selector);
+//       for (const button of closeButtons) {
+//         // Check if button is visible and contains close icon
+//         if (button.offsetParent !== null) {
+//           const hasSvgClose = button.querySelector('svg[data-test-icon="close-medium"]') ||
+//                              button.querySelector('use[href="#close-medium"]');
+          
+//           if (hasSvgClose || 
+//               button.getAttribute('aria-label')?.toLowerCase().includes('dismiss') ||
+//               button.getAttribute('aria-label')?.toLowerCase().includes('close')) {
+//             logToBackground('Content: Clicking popup close button');
+//             await button.click();
+//             await new Promise(r => setTimeout(r, 1000));
+//           }
+//         }
+//       }
+//     }
+//   } catch (error) {
+//     logToBackground('Content: Error handling popups:', error);
+//     // Don't throw error - we want to continue even if popup handling fails
+//   }
+// }
 
 async function fillFormFields(data) {
   logToBackground('Content: Starting to fill form fields');
@@ -556,59 +1040,92 @@ async function handleCheckbox(element, labelText) {
 
 // New function specifically for numeric inputs
 async function handleNumericInput(element, labelText, data) {
-  // Skip if the field already has a value
   if (element.value) return;
 
-  // Get complete element information
   const fullLabel = element.closest('label')?.textContent.trim() || 
                    document.querySelector(`label[for="${element.id}"]`)?.textContent.trim() || 
                    element.getAttribute('aria-label') || 
                    element.getAttribute('placeholder') || 
                    '';
 
-  const elementId = element.id || '';
-  const elementClasses = element.className || '';
-  const formGroup = element.closest('form-group, .form-group, .input-group')?.textContent || '';
+  const labelLower = fullLabel.toLowerCase();
   
-  // Log the field details for debugging
-  logToBackground('Content: Field details:', {
-    fullLabel,
-    elementId,
-    elementClasses,
-    formGroup
-  });
+  // Enhanced salary field detection and handling
+  const currentSalaryPatterns = [
+    /current.+salary/i,
+    /present.+salary/i,
+    /current.+ctc/i,
+    /present.+ctc/i,
+    /current.+compensation/i,
+    /current.+package/i,
+    /salary.+drawing/i,
+    /current.+annual/i
+  ];
 
-  // Specific pattern for LinkedIn skill experience questions
-  const isLinkedInSkillExperience = elementId.includes('formElement') && 
-                                   fullLabel.toLowerCase().includes('how many years') &&
-                                   fullLabel.toLowerCase().includes('experience');
+  const expectedSalaryPatterns = [
+    /expected.+salary/i,
+    /desired.+salary/i,
+    /expected.+ctc/i,
+    /expected.+compensation/i,
+    /expected.+package/i,
+    /salary.+expectation/i,
+    /expected.+annual/i
+  ];
 
-  if (isLinkedInSkillExperience) {
-    logToBackground('Content: Found LinkedIn skill experience field:', fullLabel);
-    await typeIntoField(element, data.experience.toString(), true);
+  // Check for salary-related field
+  if (labelLower.includes('salary') || labelLower.includes('ctc') || 
+      labelLower.includes('compensation') || labelLower.includes('package') ||
+      labelLower.includes('annual')) {
+    
+    // Check for current salary patterns
+    if (currentSalaryPatterns.some(pattern => pattern.test(fullLabel))) {
+      logToBackground('Content: Found current salary field:', fullLabel);
+      await typeIntoField(element, data.currentSalary.toString(), true);
+      return;
+    }
+    
+    // Check for expected salary patterns
+    if (expectedSalaryPatterns.some(pattern => pattern.test(fullLabel))) {
+      logToBackground('Content: Found expected salary field:', fullLabel);
+      await typeIntoField(element, data.expectedSalary.toString(), true);
+      return;
+    }
+
+    // If it's a salary field but pattern doesn't match, use context to decide
+    const formContext = element.closest('form')?.textContent.toLowerCase() || '';
+    if (formContext.includes('current') || formContext.includes('present')) {
+      await typeIntoField(element, data.currentSalary.toString(), true);
+    } else if (formContext.includes('expected') || formContext.includes('desired')) {
+      await typeIntoField(element, data.expectedSalary.toString(), true);
+    } else {
+      // If can't determine, use expected salary as default
+      await typeIntoField(element, data.expectedSalary.toString(), true);
+    }
     return;
   }
 
-  // General experience patterns
+  // Enhanced experience field detection
   const experiencePatterns = [
-    /how many years.+experience/i,
-    /years of.+experience/i,
-    /experience.+in years/i,
     /total.+experience/i,
-    /work experience/i
+    /years?.+experience/i,
+    /experience.+years?/i,
+    /work.+experience/i,
+    /professional.+experience/i,
+    /(ml|ai|machine learning|artificial intelligence).+experience/i,
+    /relevant.+experience/i,
+    /overall.+experience/i
   ];
 
-  const isExperienceField = experiencePatterns.some(pattern => 
-    pattern.test(fullLabel) || pattern.test(formGroup)
-  );
-
-  if (isExperienceField) {
+  // Check for experience-related field first
+  if (experiencePatterns.some(pattern => pattern.test(fullLabel)) ||
+      (labelLower.includes('experience') && 
+       (labelLower.includes('year') || labelLower.includes('yr')))) {
     logToBackground('Content: Found experience field:', fullLabel);
     await typeIntoField(element, data.experience.toString(), true);
     return;
   }
 
-  // Rest of the existing numeric input handling
+  // Rest of existing handleNumericInput logic...
   if (labelText.includes('salary') || 
       labelText.includes('ctc') || 
       labelText.includes('compensation') || 
@@ -710,45 +1227,6 @@ async function typeIntoField(target, text, isNumeric = false) {
   }
 }
 
-async function clickNextOrSubmit() {
-  const buttonSelectors = [
-    'button[aria-label="Submit application"]',
-    'button[aria-label="Continue to next step"]',
-    'button.artdeco-button--primary',
-    'button[type="submit"]',
-    '.jobs-easy-apply-content button:not([aria-label="Dismiss"])'
-  ];
-
-  for (const selector of buttonSelectors) {
-    const buttons = document.querySelectorAll(selector);
-    for (const button of buttons) {
-      if (button.offsetParent !== null && 
-          !button.disabled && 
-          !button.getAttribute('aria-label')?.includes('Dismiss')) {
-        logToBackground('Content: Clicking button:', button.textContent.trim());
-        await button.click();
-        await new Promise(r => setTimeout(r, 2000));
-        
-        // Check form status
-        const modalClosed = !document.querySelector('.jobs-easy-apply-modal');
-        const hasError = document.querySelector('.artdeco-inline-feedback--error');
-        
-        if (modalClosed) {
-          logToBackground('Content: Application submitted');
-          return true;
-        }
-        if (hasError) {
-          logToBackground('Content: Form has errors');
-          throw new Error('Application form has errors');
-        }
-        return false;
-      }
-    }
-  }
-
-  return true; // If no buttons found, assume completed
-}
-
 async function goToNextPage(pageIndex) {
   const nextButton = document.querySelector(`button[aria-label="Page ${pageIndex}"]`);
   if (!nextButton) return false;
@@ -842,5 +1320,50 @@ async function getJobCards() {
   }
   
   throw new Error('No job cards found');
+}
+
+async function findShowResultsButton() {
+  try {
+    logToBackground('Content: Looking for show results button');
+    
+    // First try the most specific selector that matches the example
+    const specificSelectors = [
+      'button[aria-label^="Apply current filter to show"][aria-live="polite"]',
+      'button.artdeco-button--2.artdeco-button--primary.ml2[type="button"]'
+    ];
+
+    // Try to find the button using specific selectors first
+    for (const selector of specificSelectors) {
+      const button = document.querySelector(selector);
+      if (button && 
+          button.offsetParent !== null && 
+          button.querySelector('.artdeco-button__text')?.textContent.trim().toLowerCase().includes('show')) {
+        logToBackground('Content: Found show results button by selector');
+        return button;
+      }
+    }
+
+    // If not found, try finding by aria-label pattern
+    const allButtons = Array.from(document.querySelectorAll('button.artdeco-button--primary'));
+    const resultButton = allButtons.find(button => {
+      const ariaLabel = button.getAttribute('aria-label') || '';
+      const buttonText = button.textContent.trim().toLowerCase();
+      const hasShowResults = buttonText.includes('show') && buttonText.includes('results');
+      const hasCorrectAriaLabel = ariaLabel.toLowerCase().includes('apply current filter to show');
+      
+      return (hasShowResults || hasCorrectAriaLabel) && button.offsetParent !== null;
+    });
+
+    if (resultButton) {
+      logToBackground('Content: Found show results button by text content');
+      return resultButton;
+    }
+
+    logToBackground('Content: Show results button not found');
+    return null;
+  } catch (error) {
+    logToBackground('Content: Error finding show results button:', error);
+    return null;
+  }
 }
 
