@@ -78,7 +78,7 @@ async function navigateToJobs() {
       '[id^="jobs-search-box-keyword-id"]',
       '.jobs-search-box__text-input',
       '#global-nav-search'
-    ], 10000);
+    ], 1000);
 
     logToBackground('Content: Found search box:', searchBox.id);
     await new Promise(r => setTimeout(r, 2000));
@@ -162,7 +162,7 @@ async function searchJobs(data) {
     logToBackground('Content: Waiting for search results...');
     
     // Wait for job list and first job card
-    const jobList = await waitForAnyElement(resultSelectors, 10000);
+    const jobList = await waitForAnyElement(resultSelectors, 1000);
     await new Promise(r => setTimeout(r, 5000));
 
     // Try to find and click the Easy Apply filter
@@ -492,9 +492,6 @@ async function processJobCard(jobCard, data) {
     // Additional wait after form processing
     await new Promise(r => setTimeout(r, 2000));
 
-    // Handle any final popups
-    // await handlePopups();
-
     logToBackground('Content: Job application completed');
     return true;
   } catch (error) {
@@ -685,9 +682,7 @@ async function processApplicationForm(data) {
     try {
       // Wait for form fields to be visible
       await new Promise(r => setTimeout(r, 2000));
-      
-      // Check and handle any popup dialogs
-      // await handlePopups();
+    
       
       logToBackground('Content: Filling form fields');
       await fillFormFields(data);
@@ -711,9 +706,6 @@ async function processApplicationForm(data) {
         attempts++;
       }
       
-      // Check for popups again after submission
-      // await handlePopups();
-      
     } catch (error) {
       logToBackground('Content: Form processing error:', error.message);
       break;
@@ -723,15 +715,16 @@ async function processApplicationForm(data) {
 
 async function clickNextOrSubmit() {
   const buttonSelectors = [
-    // Exact selector for the button you provided
+    // Submit-specific selectors
+    'button[aria-label="Submit application"]',
+    'button[aria-label="Review your application"]',
+    // Next-specific selectors
     'button[data-easy-apply-next-button]',
     'button[data-live-test-easy-apply-next-button]',
     'button[aria-label="Continue to next step"]',
     // Backup selectors
     'button.artdeco-button--primary[type="button"]',
-    'button.artdeco-button--2.artdeco-button--primary',
-    'button[aria-label="Submit application"]',
-    'button[aria-label="Review your application"]'
+    'button.artdeco-button--2.artdeco-button--primary'
   ];
 
   try {
@@ -745,7 +738,6 @@ async function clickNextOrSubmit() {
     for (const selector of buttonSelectors) {
       const buttons = document.querySelectorAll(selector);
       for (const button of buttons) {
-        // Verify button is visible, enabled and has correct text
         if (button.offsetParent !== null && 
             !button.disabled && 
             !button.getAttribute('aria-label')?.includes('Dismiss')) {
@@ -754,31 +746,21 @@ async function clickNextOrSubmit() {
           const buttonSpan = button.querySelector('.artdeco-button__text');
           const spanText = buttonSpan ? buttonSpan.textContent.trim().toLowerCase() : '';
           
-          logToBackground('Content: Found button:', buttonText || spanText);
+          const isSubmitButton = buttonText.includes('submit') || spanText.includes('submit');
 
-          // Check if it's a next/submit/review button
-          if (buttonText.includes('next') || 
-              spanText.includes('next') || 
-              buttonText.includes('submit') || 
-              buttonText.includes('review') ||
-              buttonText.includes('continue')) {
+          if (isSubmitButton || buttonText.includes('next') || spanText.includes('review') || buttonText.includes('review') ||
+              spanText.includes('next') || buttonText.includes('continue')) {
             
             try {
-              logToBackground('Content: Attempting to click button');
-              // Try multiple click methods
-              try {
-                await button.click();
-              } catch {
-                // Fallback to mousedown/mouseup events
-                button.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
-                button.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
-                button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-              }
-              
-              // Wait longer for the click to take effect
-              await new Promise(r => setTimeout(r, 3000));
+              await button.click();
+              await new Promise(r => setTimeout(r, 2000));
 
-              // Check if modal closed
+              if (isSubmitButton) {
+                // Wait for and handle the post-submit dialog
+                await handlePostSubmitDialog();
+              }
+
+              // Check if the apply modal is still open
               const modalStillOpen = document.querySelector('.jobs-easy-apply-modal');
               if (!modalStillOpen) {
                 return { modalClosed: true, clicked: true };
@@ -791,7 +773,7 @@ async function clickNextOrSubmit() {
               }
             } catch (err) {
               logToBackground('Content: Error clicking button:', err);
-              continue; // Try next button if this one fails
+              continue;
             }
           }
         }
@@ -804,47 +786,6 @@ async function clickNextOrSubmit() {
     return { modalClosed: false, clicked: false };
   }
 }
-
-// Add new function to handle popups
-// async function handlePopups() {
-//   try {
-//     // Multiple selectors for close buttons
-//     const closeButtonSelectors = [
-//       'button[aria-label="Dismiss"]',
-//       'button[aria-label="Close"]',
-//       'button.artdeco-modal__dismiss',
-//       'button.artdeco-button--circle',
-//       // Look for button containing the close SVG
-//       'button:has(svg[data-test-icon="close-medium"])',
-//       // Broader selectors as fallback
-//       'button.artdeco-button:has(svg)',
-//       '[aria-label="Dismiss"] button',
-//       '[role="dialog"] button:has(svg)'
-//     ];
-
-//     for (const selector of closeButtonSelectors) {
-//       const closeButtons = document.querySelectorAll(selector);
-//       for (const button of closeButtons) {
-//         // Check if button is visible and contains close icon
-//         if (button.offsetParent !== null) {
-//           const hasSvgClose = button.querySelector('svg[data-test-icon="close-medium"]') ||
-//                              button.querySelector('use[href="#close-medium"]');
-          
-//           if (hasSvgClose || 
-//               button.getAttribute('aria-label')?.toLowerCase().includes('dismiss') ||
-//               button.getAttribute('aria-label')?.toLowerCase().includes('close')) {
-//             logToBackground('Content: Clicking popup close button');
-//             await button.click();
-//             await new Promise(r => setTimeout(r, 1000));
-//           }
-//         }
-//       }
-//     }
-//   } catch (error) {
-//     logToBackground('Content: Error handling popups:', error);
-//     // Don't throw error - we want to continue even if popup handling fails
-//   }
-// }
 
 async function fillFormFields(data) {
   logToBackground('Content: Starting to fill form fields');
@@ -1367,3 +1308,38 @@ async function findShowResultsButton() {
   }
 }
 
+async function handlePostSubmitDialog() {
+  try {
+    // Wait for the post-submit dialog to appear
+    const dialog = await waitForElement('[data-test-modal][role="dialog"][aria-labelledby="post-apply-modal"]');
+    if (!dialog) {
+      logToBackground('Content: Post-submit dialog not found');
+      return;
+    }
+
+    // Wait a moment for animations
+    await new Promise(r => setTimeout(r, 1000));
+
+    // Try to click the "Done" button first
+    const doneButton = dialog.querySelector('.artdeco-modal__actionbar button.artdeco-button--primary');
+    if (doneButton) {
+      logToBackground('Content: Clicking Done button');
+      await doneButton.click();
+      await new Promise(r => setTimeout(r, 1000));
+      return;
+    }
+
+    // If Done button not found, try the dismiss (X) button
+    const dismissButton = dialog.querySelector('button[data-test-modal-close-btn]');
+    if (dismissButton) {
+      logToBackground('Content: Clicking dismiss button');
+      await dismissButton.click();
+      await new Promise(r => setTimeout(r, 1000));
+      return;
+    }
+
+    logToBackground('Content: No clickable buttons found in post-submit dialog');
+  } catch (error) {
+    logToBackground('Content: Error handling post-submit dialog:', error);
+  }
+}
