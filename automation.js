@@ -65,23 +65,12 @@ async function navigateToJobs() {
     // Don't navigate if already on jobs page
     if (window.location.href.includes('linkedin.com/jobs')) {
       logToBackground('Content: Already on jobs page');
-      await new Promise(r => setTimeout(r, 1000));
       return;
     }
 
     logToBackground('Content: Navigating to jobs page');
     window.location.href = 'https://www.linkedin.com/jobs/';
-    await new Promise(r => setTimeout(r, 2000));
 
-    // Wait for either the modern or legacy search box
-    const searchBox = await waitForAnyElement([
-      '[id^="jobs-search-box-keyword-id"]',
-      '.jobs-search-box__text-input',
-      '#global-nav-search'
-    ], 1000);
-
-    logToBackground('Content: Found search box:', searchBox.id);
-    await new Promise(r => setTimeout(r, 2000));
   } catch (error) {
     logToBackground('Content: Navigation error:', error);
     throw error;
@@ -94,19 +83,11 @@ async function searchJobs(data) {
   try {
     // Update to use data.keywords and data.location
     const keywordSelectors = [
-      '[id^="jobs-search-box-keyword-id"]',
-      '.jobs-search-box__text-input[aria-label*="Search"]',
-      '#global-nav-search',
-      'input[aria-label*="Search job titles"]',
-      'input[placeholder*="Search job titles"]'
+      '[id^="jobs-search-box-keyword-id"]'
     ];
 
     const locationSelectors = [
-      '[id^="jobs-search-box-location-id"]',
-      '.jobs-search-box__text-input[aria-label*="location"]',
-      '[aria-label="Location"]',
-      'input[aria-label*="City, state, or zip code"]',
-      'input[placeholder*="Location"]'
+      '[id^="jobs-search-box-location-id"]'
     ];
 
     const keywordInput = await waitForAnyElement(keywordSelectors);
@@ -118,63 +99,30 @@ async function searchJobs(data) {
 
     // Type with delay between characters
     await typeIntoField(keywordInput, data.keywords);
-    await new Promise(r => setTimeout(r, 1000));
     
     await typeIntoField(locationInput, data.location);
-    await new Promise(r => setTimeout(r, 1000));
 
-    // Try multiple ways to trigger the search
-    const searchTriggers = [
-      // Try search button first
-      async () => {
-        const searchButton = document.querySelector('button[type="submit"], button.jobs-search-box__submit-button');
-        if (searchButton) {
-          await searchButton.click();
-          return true;
-        }
-        return false;
-      },
-      // Try Enter key on location input
-      async () => {
-        locationInput.focus();
-        await simulateEnterKey(locationInput);
-        return true;
-      }
-    ];
+    await simulateEnterKey(locationInput);
+        await new Promise(r => setTimeout(r, 500));
 
-    // Try each search trigger method until one works
-    for (const trigger of searchTriggers) {
-      await trigger();
-      await new Promise(r => setTimeout(r, 3000));
-    }
+    // // Updated selectors for job results list
+    // const resultSelectors = [
+    //   '.scaffold-layout__list'
+    // ];
 
-    // Updated selectors for job results list
-    const resultSelectors = [
-      '.jobs-search-results-list',
-      '.scaffold-layout__list',
-      '.jobs-search-results__list',
-      '.jobs-search-two-pane__wrapper',
-      '.jobs-search-results-list__wrapper',
-      'ul.AuahQyTsyfRUuEwdQzwgDcZuzoJLURSsXfs',
-      '.jobs-search__results-list'
-    ];
-
-    logToBackground('Content: Waiting for search results...');
+    // logToBackground('Content: Waiting for search results...');
     
-    // Wait for job list and first job card
-    const jobList = await waitForAnyElement(resultSelectors, 1000);
-    await new Promise(r => setTimeout(r, 5000));
+    // // Wait for job list and first job card
+    // const jobList = await waitForAnyElement(resultSelectors, 100);
+    // await new Promise(r => setTimeout(r, 500));
 
     // Try to find and click the Easy Apply filter
     logToBackground('Content: Looking for Easy Apply filter');
     const easyApplySelectors = [
-      'button[aria-label="Easy Apply filter."]',
-      '#searchFilter_applyWithLinkedin',
-      'button.search-reusables__filter-pill-button',
-      '.search-reusables__filter-binary-toggle button'
+      'button[aria-label="Easy Apply filter."]'
     ];
 
-    const easyApplyButton = await waitForAnyElement(easyApplySelectors, 10000);
+    const easyApplyButton = await waitForAnyElement(easyApplySelectors, 5000);
     if (easyApplyButton) {
       logToBackground('Content: Clicking Easy Apply filter');
       await easyApplyButton.click();
@@ -195,6 +143,7 @@ async function searchJobs(data) {
       
       if (dateFilterButton) {
         await dateFilterButton.click();
+        logToBackground('Content: date button clicked');
         await new Promise(r => setTimeout(r, 1000));
 
         // Select the appropriate radio button
@@ -333,7 +282,7 @@ async function searchJobs(data) {
       '.ember-view.jobs-search-results__list-item'
     ];
 
-    const hasJobCards = await waitForAnyElement(jobCardSelectors, 10000);
+    const hasJobCards = await waitForAnyElement(jobCardSelectors, 500);
     if (!hasJobCards) {
       throw new Error('No Easy Apply job cards found in results');
     }
@@ -402,95 +351,95 @@ async function processJobCard(jobCard, data) {
 
     // Scroll into view smoothly
     await jobCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    await new Promise(r => setTimeout(r, 1500));
+    await new Promise(r => setTimeout(r, 500));
 
     // Click the job title/link
     logToBackground('Content: Clicking job card');
     await jobLink.click();
     
     // Increased wait time for initial load
-    await new Promise(r => setTimeout(r, 3000));
+    await new Promise(r => setTimeout(r, 1000));
 
-    // Wait for job details panel with multiple possible selectors
-    const detailsPanelSelectors = [
-      '.jobs-unified-top-card',
-      '.jobs-details',
-      '[data-job-id]',
-      '.jobs-details__main-content'
-    ];
+    // // Wait for job details panel with multiple possible selectors
+    // const detailsPanelSelectors = [
+    //   '.jobs-unified-top-card',
+    //   '.jobs-details',
+    //   '[data-job-id]',
+    //   '.jobs-details__main-content'
+    // ];
 
-    let detailsPanel = null;
-    for (let attempt = 0; attempt < 3; attempt++) {
-      logToBackground('Content: Attempting to find details panel, attempt', attempt + 1);
+    // let detailsPanel = null;
+    // for (let attempt = 0; attempt < 3; attempt++) {
+    //   logToBackground('Content: Attempting to find details panel, attempt', attempt + 1);
       
-      for (const selector of detailsPanelSelectors) {
-        const element = document.querySelector(selector);
-        if (element && element.offsetParent !== null) {
-          detailsPanel = element;
-          break;
-        }
-      }
+    //   for (const selector of detailsPanelSelectors) {
+    //     const element = document.querySelector(selector);
+    //     if (element && element.offsetParent !== null) {
+    //       detailsPanel = element;
+    //       break;
+    //     }
+    //   }
 
-      if (detailsPanel) break;
+    //   if (detailsPanel) break;
       
-      // If not found, wait and try again
-      await new Promise(r => setTimeout(r, 2000));
-    }
+    //   // If not found, wait and try again
+    //   await new Promise(r => setTimeout(r, 2000));
+    // }
 
-    if (!detailsPanel) {
-      throw new Error('Job details panel not loaded after multiple attempts');
-    }
+    // if (!detailsPanel) {
+    //   throw new Error('Job details panel not loaded after multiple attempts');
+    // }
 
-    logToBackground('Content: Job details panel found, waiting for content to settle');
-    await new Promise(r => setTimeout(r, 2000));
+    // logToBackground('Content: Job details panel found, waiting for content to settle');
+    // await new Promise(r => setTimeout(r, 2000));
 
     // Wait specifically for the Easy Apply button container
-    const easyApplyContainer = await waitForElement('.jobs-s-apply.jobs-s-apply--fadein');
-    if (!easyApplyContainer) {
-      throw new Error('Easy Apply button container not found');
-    }
+    // const easyApplyContainer = await waitForElement('.jobs-s-apply.jobs-s-apply--fadein');
+    // if (!easyApplyContainer) {
+    //   throw new Error('Easy Apply button container not found');
+    // }
 
     // Find the Easy Apply button within the container
     const easyApplyButton = await waitForElement(
       '.jobs-s-apply .jobs-apply-button--top-card button.jobs-apply-button', 
-      5000
+      500
     );
 
     if (!easyApplyButton) {
       throw new Error('Easy Apply button not found');
     }
 
-    // Verify button state
-    const buttonText = easyApplyButton.textContent.trim().toLowerCase();
-    const ariaLabel = easyApplyButton.getAttribute('aria-label')?.toLowerCase() || '';
+    // // Verify button state
+    // const buttonText = easyApplyButton.textContent.trim().toLowerCase();
+    // const ariaLabel = easyApplyButton.getAttribute('aria-label')?.toLowerCase() || '';
     
-    if (buttonText.includes('applied') || ariaLabel.includes('applied')) {
-      logToBackground('Content: Job already applied (button state), skipping');
-      throw new Error('Job already applied');
-    }
+    // if (buttonText.includes('applied') || ariaLabel.includes('applied')) {
+    //   logToBackground('Content: Job already applied (button state), skipping');
+    //   throw new Error('Job already applied');
+    // }
 
     logToBackground('Content: Clicking Easy Apply button');
     await easyApplyButton.click();
-    await new Promise(r => setTimeout(r, 2000));
+    // await new Promise(r => setTimeout(r, 1000));
 
-    // Wait for the application modal
-    const modalSelectors = [
-      '.jobs-easy-apply-modal',
-      '[data-test-modal-id="easy-apply-modal"]',
-      '[role="dialog"][aria-label*="apply"]'
-    ];
+    // // Wait for the application modal
+    // const modalSelectors = [
+    //   '.jobs-easy-apply-modal',
+    //   '[data-test-modal-id="easy-apply-modal"]',
+    //   '[role="dialog"][aria-label*="apply"]'
+    // ];
 
-    const modal = await waitForAnyElement(modalSelectors, 5000);
-    if (!modal) {
-      throw new Error('Application modal not found');
-    }
+    // const modal = await waitForAnyElement(modalSelectors, 5000);
+    // if (!modal) {
+    //   throw new Error('Application modal not found');
+    // }
 
     // Start the application process
     logToBackground('Content: Starting application process');
     await processApplicationForm(data);
 
     // Additional wait after form processing
-    await new Promise(r => setTimeout(r, 2000));
+    await new Promise(r => setTimeout(r, 500));
 
     logToBackground('Content: Job application completed');
     return true;
@@ -500,83 +449,83 @@ async function processJobCard(jobCard, data) {
   }
 }
 
-// Add new function to verify Easy Apply status
-async function verifyEasyApplyJob(detailsPanel) {
-  try {
-    // Multiple ways to detect Easy Apply
-    const easyApplyIndicators = [
-      // Direct Easy Apply button
-      'button.jobs-apply-button',
-      'button[aria-label*="Easy Apply"]',
-      // Easy Apply text indicators
-      '.jobs-unified-top-card__easy-apply-label',
-      '.jobs-apply-button--top-card',
-      '[data-test-job-card-easy-apply]'
-    ];
+// // Add new function to verify Easy Apply status
+// async function verifyEasyApplyJob(detailsPanel) {
+//   try {
+//     // Multiple ways to detect Easy Apply
+//     const easyApplyIndicators = [
+//       // Direct Easy Apply button
+//       'button.jobs-apply-button',
+//       'button[aria-label*="Easy Apply"]',
+//       // Easy Apply text indicators
+//       '.jobs-unified-top-card__easy-apply-label',
+//       '.jobs-apply-button--top-card',
+//       '[data-test-job-card-easy-apply]'
+//     ];
 
-    // Check each indicator
-    for (const selector of easyApplyIndicators) {
-      const indicator = detailsPanel.querySelector(selector);
-      if (indicator && indicator.offsetParent !== null) {
-        // Additional verification for buttons
-        if (indicator.tagName === 'BUTTON') {
-          const text = indicator.textContent.toLowerCase();
-          const ariaLabel = indicator.getAttribute('aria-label')?.toLowerCase() || '';
+//     // Check each indicator
+//     for (const selector of easyApplyIndicators) {
+//       const indicator = detailsPanel.querySelector(selector);
+//       if (indicator && indicator.offsetParent !== null) {
+//         // Additional verification for buttons
+//         if (indicator.tagName === 'BUTTON') {
+//           const text = indicator.textContent.toLowerCase();
+//           const ariaLabel = indicator.getAttribute('aria-label')?.toLowerCase() || '';
           
-          // Skip if it shows as already applied
-          if (text.includes('applied') || ariaLabel.includes('applied')) {
-            continue;
-          }
+//           // Skip if it shows as already applied
+//           if (text.includes('applied') || ariaLabel.includes('applied')) {
+//             continue;
+//           }
           
-          // Verify it's an Easy Apply button
-          if (text.includes('easy apply') || ariaLabel.includes('easy apply')) {
-            return true;
-          }
-        } else {
-          // For non-button indicators, just check visibility
-          return true;
-        }
-      }
-    }
+//           // Verify it's an Easy Apply button
+//           if (text.includes('easy apply') || ariaLabel.includes('easy apply')) {
+//             return true;
+//           }
+//         } else {
+//           // For non-button indicators, just check visibility
+//           return true;
+//         }
+//       }
+//     }
 
-    return false;
-  } catch (error) {
-    logToBackground('Content: Error verifying Easy Apply status:', error);
-    return false;
-  }
-}
+//     return false;
+//   } catch (error) {
+//     logToBackground('Content: Error verifying Easy Apply status:', error);
+//     return false;
+//   }
+// }
 
 // Add new function to verify we're in the application flow
-async function verifyApplicationFlow(modal) {
-  try {
-    // Check for common elements in the application flow
-    const applicationFlowIndicators = [
-      // Form elements
-      'form.jobs-easy-apply-form',
-      '.jobs-easy-apply-content',
-      // Progress indicator
-      '.artdeco-completeness-meter-linear',
-      // Common form fields
-      'input[name*="apply"]',
-      'select[name*="apply"]',
-      // Submit/Next buttons
-      'button[aria-label*="Submit"]',
-      'button[aria-label*="Continue"]'
-    ];
+// async function verifyApplicationFlow(modal) {
+//   try {
+//     // Check for common elements in the application flow
+//     const applicationFlowIndicators = [
+//       // Form elements
+//       'form.jobs-easy-apply-form',
+//       '.jobs-easy-apply-content',
+//       // Progress indicator
+//       '.artdeco-completeness-meter-linear',
+//       // Common form fields
+//       'input[name*="apply"]',
+//       'select[name*="apply"]',
+//       // Submit/Next buttons
+//       'button[aria-label*="Submit"]',
+//       'button[aria-label*="Continue"]'
+//     ];
 
-    for (const selector of applicationFlowIndicators) {
-      const indicator = modal.querySelector(selector);
-      if (indicator && indicator.offsetParent !== null) {
-        return true;
-      }
-    }
+//     for (const selector of applicationFlowIndicators) {
+//       const indicator = modal.querySelector(selector);
+//       if (indicator && indicator.offsetParent !== null) {
+//         return true;
+//       }
+//     }
 
-    return false;
-  } catch (error) {
-    logToBackground('Content: Error verifying application flow:', error);
-    return false;
-  }
-}
+//     return false;
+//   } catch (error) {
+//     logToBackground('Content: Error verifying application flow:', error);
+//     return false;
+//   }
+// }
 
 // Add new function to check if job is already applied
 async function checkIfJobApplied(jobCard) {
@@ -607,50 +556,50 @@ async function checkIfJobApplied(jobCard) {
   }
 }
 
-// Add new function to find the correct apply button
-async function findApplyButton() {
-  const applyButtonSelectors = [
-    // Easy Apply specific selectors
-    'button.jobs-apply-button:not([disabled])',
-    'button[aria-label="Easy Apply to this job"]',
-    // General apply button selectors
-    'button.jobs-apply-button',
-    'button[aria-label*="Easy Apply"]',
-    '.jobs-s-apply button'
-  ];
+// // Add new function to find the correct apply button
+// async function findApplyButton() {
+//   const applyButtonSelectors = [
+//     // Easy Apply specific selectors
+//     'button.jobs-apply-button:not([disabled])',
+//     'button[aria-label="Easy Apply to this job"]',
+//     // General apply button selectors
+//     'button.jobs-apply-button',
+//     'button[aria-label*="Easy Apply"]',
+//     '.jobs-s-apply button'
+//   ];
 
-  try {
-    const buttons = document.querySelectorAll(
-      applyButtonSelectors.join(',')
-    );
+//   try {
+//     const buttons = document.querySelectorAll(
+//       applyButtonSelectors.join(',')
+//     );
 
-    for (const button of buttons) {
-      if (!button.offsetParent || button.disabled) continue;
+//     for (const button of buttons) {
+//       if (!button.offsetParent || button.disabled) continue;
 
-      const buttonText = button.textContent.toLowerCase();
-      const ariaLabel = button.getAttribute('aria-label')?.toLowerCase() || '';
+//       const buttonText = button.textContent.toLowerCase();
+//       const ariaLabel = button.getAttribute('aria-label')?.toLowerCase() || '';
 
-      // Skip if button indicates already applied
-      if (buttonText.includes('applied') || 
-          ariaLabel.includes('applied') ||
-          button.closest('[data-test-applied-indicator]')) {
-        continue;
-      }
+//       // Skip if button indicates already applied
+//       if (buttonText.includes('applied') || 
+//           ariaLabel.includes('applied') ||
+//           button.closest('[data-test-applied-indicator]')) {
+//         continue;
+//       }
 
-      // Check specifically for Easy Apply buttons
-      if ((buttonText.includes('easy apply') || ariaLabel.includes('easy apply')) &&
-          !buttonText.includes('applied') && 
-          !ariaLabel.includes('applied')) {
-        return button;
-      }
-    }
+//       // Check specifically for Easy Apply buttons
+//       if ((buttonText.includes('easy apply') || ariaLabel.includes('easy apply')) &&
+//           !buttonText.includes('applied') && 
+//           !ariaLabel.includes('applied')) {
+//         return button;
+//       }
+//     }
 
-    return null;
-  } catch (error) {
-    logToBackground('Content: Error finding apply button:', error);
-    return null;
-  }
-}
+//     return null;
+//   } catch (error) {
+//     logToBackground('Content: Error finding apply button:', error);
+//     return null;
+//   }
+// }
 
 async function findClickableElement(jobCard) {
   const selectors = [
@@ -681,14 +630,14 @@ async function processApplicationForm(data) {
   while (!isCompleted && attempts < maxAttempts) {
     try {
       // Wait for form fields to be visible
-      await new Promise(r => setTimeout(r, 2000));
+      // await new Promise(r => setTimeout(r, 1000));
     
       
       logToBackground('Content: Filling form fields');
       await fillFormFields(data);
       
-      // Wait for any animations to complete
-      await new Promise(r => setTimeout(r, 1000));
+      // // Wait for any animations to complete
+      // await new Promise(r => setTimeout(r, 1000));
 
       logToBackground('Content: Looking for next/submit button');
       const result = await clickNextOrSubmit();
@@ -700,7 +649,7 @@ async function processApplicationForm(data) {
       } else if (result.clicked) {
         logToBackground('Content: Proceeding to next step');
         // Wait longer after clicking next to ensure new form loads
-        await new Promise(r => setTimeout(r, 3000));
+        // await new Promise(r => setTimeout(r, 3000));
       } else {
         logToBackground('Content: No clickable next/submit button found');
         attempts++;
@@ -753,7 +702,7 @@ async function clickNextOrSubmit() {
             
             try {
               await button.click();
-              await new Promise(r => setTimeout(r, 2000));
+              await new Promise(r => setTimeout(r, 500));
 
               if (isSubmitButton) {
                 // Wait for and handle the post-submit dialog
@@ -1111,24 +1060,6 @@ async function handleTextInput(element, labelText, data) {
   if (labelText.includes('first name') || labelText.includes('firstname')) {
     await typeIntoField(element, "John");
   }
-  else if (labelText.includes('last name') || labelText.includes('lastname')) {
-    await typeIntoField(element, "Doe");
-  }
-  else if (labelText.includes('email')) {
-    await typeIntoField(element, "example@example.com");
-  }
-  else if (labelText.includes('address')) {
-    await typeIntoField(element, "123 Main St");
-  }
-  else if (labelText.includes('city')) {
-    await typeIntoField(element, "New York");
-  }
-  else if (labelText.includes('state')) {
-    await typeIntoField(element, "NY");
-  }
-  else if (labelText.includes('country')) {
-    await typeIntoField(element, "United States");
-  }
   else {
     // Default to "Yes" for any other text field
     await typeIntoField(element, "Yes");
@@ -1220,15 +1151,15 @@ async function clearField(element) {
   await new Promise(r => setTimeout(r, 500));
 }
 
-async function typeSlowly(element, text) {
-  for (const char of text) {
-    element.value += char;
-    element.dispatchEvent(new Event('input', { bubbles: true }));
-    await new Promise(r => setTimeout(r, 100));
-  }
-  element.dispatchEvent(new Event('change', { bubbles: true }));
-  await new Promise(r => setTimeout(r, 500));
-}
+// async function typeSlowly(element, text) {
+//   for (const char of text) {
+//     element.value += char;
+//     element.dispatchEvent(new Event('input', { bubbles: true }));
+//     await new Promise(r => setTimeout(r, 100));
+//   }
+//   element.dispatchEvent(new Event('change', { bubbles: true }));
+//   await new Promise(r => setTimeout(r, 500));
+// }
 
 async function simulateEnterKey(element) {
   const events = [
@@ -1318,14 +1249,14 @@ async function handlePostSubmitDialog() {
     }
 
     // Wait a moment for animations
-    await new Promise(r => setTimeout(r, 1000));
+    await new Promise(r => setTimeout(r, 100));
 
     // Try to click the "Done" button first
     const doneButton = dialog.querySelector('.artdeco-modal__actionbar button.artdeco-button--primary');
     if (doneButton) {
       logToBackground('Content: Clicking Done button');
       await doneButton.click();
-      await new Promise(r => setTimeout(r, 1000));
+      await new Promise(r => setTimeout(r, 100));
       return;
     }
 
@@ -1334,7 +1265,7 @@ async function handlePostSubmitDialog() {
     if (dismissButton) {
       logToBackground('Content: Clicking dismiss button');
       await dismissButton.click();
-      await new Promise(r => setTimeout(r, 1000));
+      await new Promise(r => setTimeout(r, 100));
       return;
     }
 
