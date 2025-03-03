@@ -50,19 +50,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Keep popup open by adding a dummy mousemove listener
-  document.addEventListener('mousemove', () => {});
-
-  chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    if (request.action === 'updateProgress' && isAutomationRunning) {
-      const percent = (request.total / document.getElementById('totalJobsToApply').value) * 100;
-      progressBar.style.width = `${percent}%`;
-      progressText.textContent = `Applied: ${request.total} jobs`;
-    }
-    sendResponse({ received: true });
-    return false;
-  });
-
   stopButton.addEventListener('click', async () => {
     chrome.runtime.sendMessage({ action: 'stopAutomation' }, (response) => {
       if (response && response.success) {
@@ -73,11 +60,14 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   });
-});
 
-// Keep the popup alive by pinging the background script
-setInterval(() => {
-  if (isAutomationRunning) {
-    chrome.runtime.sendMessage({ action: 'keepAlive' });
-  }
-}, 1000);
+  chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    if (request.action === 'updateProgress' && isAutomationRunning) {
+      const percent = (request.total / document.getElementById('totalJobsToApply').value) * 100;
+      progressBar.style.width = `${percent}%`;
+      progressText.textContent = `Applied: ${request.total} jobs`;
+    }
+    sendResponse({ received: true });
+    return false;
+  });
+});

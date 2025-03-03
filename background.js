@@ -1,4 +1,5 @@
 let automationTab = null;
+let windowId = null;
 
 function log(...messages) {
   console.log('Background:', ...messages);
@@ -138,5 +139,27 @@ async function injectAutomationScript(tabId) {
 chrome.tabs.onRemoved.addListener((tabId) => {
   if (automationTab && automationTab.id === tabId) {
     automationTab = null;
+  }
+});
+
+chrome.action.onClicked.addListener(() => {
+  if (windowId === null) {
+    chrome.windows.create({
+      url: 'popup.html',
+      type: 'popup',
+      width: 400,
+      height: 600,
+      focused: true
+    }, (window) => {
+      windowId = window.id;
+    });
+  } else {
+    chrome.windows.update(windowId, { focused: true });
+  }
+});
+
+chrome.windows.onRemoved.addListener((removedWindowId) => {
+  if (removedWindowId === windowId) {
+    windowId = null;
   }
 });

@@ -300,15 +300,24 @@ async function applyToJobs(data) {
 
   while (totalApplied < data.totalJobsToApply) {
     logToBackground('Content: Getting job cards');
-    const jobCards = await getJobCards();
+    let jobCards = await getJobCards();
     logToBackground(`Content: Found ${jobCards.length} job cards`);
     
-    for (const jobCard of jobCards) {
-      if (totalApplied >= data.totalJobsToApply) break;
-      
+    // Process all visible job cards on the current page
+    let cardIndex = 0;
+    while (cardIndex < jobCards.length && totalApplied < data.totalJobsToApply) {
       try {
-        logToBackground('Content: Processing job card');
-        await processJobCard(jobCard, data);
+        const currentCard = jobCards[cardIndex];
+        logToBackground(`Content: Processing job card ${cardIndex + 1}/${jobCards.length}`);
+        
+        // Scroll to the card to ensure it's in view
+        await currentCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        await new Promise(r => setTimeout(r, 1000));
+        
+        // Refresh job cards list after scrolling (in case of dynamic loading)
+        jobCards = await getJobCards();
+        
+        await processJobCard(currentCard, data);
         totalApplied++;
         chrome.runtime.sendMessage({
           action: 'updateProgress',
@@ -316,17 +325,22 @@ async function applyToJobs(data) {
         });
       } catch (error) {
         logToBackground('Content: Error processing job card:', error);
-        continue; // Continue with next job card if current one fails
+        // Continue to next card even if current one fails
       }
+      cardIndex++;
     }
 
+    // Only move to next page if we still need to apply to more jobs
     if (totalApplied < data.totalJobsToApply) {
       const hasNextPage = await goToNextPage(++pageIndex);
       if (!hasNextPage) {
         logToBackground('Content: No more pages available');
         break;
       }
-      await new Promise(r => setTimeout(r, 3000)); // Wait for new page to load
+      // Wait longer after page change to ensure content is loaded
+      await new Promise(r => setTimeout(r, 5000));
+    } else {
+      break;
     }
   }
 }
@@ -1187,7 +1201,13 @@ async function getJobCards() {
   for (const selector of selectors) {
     const cards = Array.from(document.querySelectorAll(selector));
     if (cards.length > 0) {
-      return cards.filter(card => card.offsetParent !== null); // Only return visible cards
+      // Only return visible and non-applied cards
+      const visibleCards = cards.filter(card => {
+        const isVisible = card.offsetParent !== null;
+        const isApplied = card.querySelector('.jobs-applied-badge') !== null;
+        return isVisible && !isApplied;
+      });
+      return visibleCards;
     }
   }
   
