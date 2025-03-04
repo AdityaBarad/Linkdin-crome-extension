@@ -1,3 +1,13 @@
+chrome.runtime.onMessageExternal.addListener(
+  (request, sender, sendResponse) => {
+    if (request.action === 'startAutomation') {
+      handleStartAutomation(request.data, sendResponse);
+      return true; // Keep the message channel open
+    }
+    return false;
+  }
+);
+
 let automationTab = null;
 let windowId = null;
 
@@ -27,12 +37,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
 async function handleStartAutomation(data, sendResponse) {
   try {
-    // Get or create tab
-    automationTab = await getCurrentOrCreateTab();
-    log('Using tab:', automationTab.id);
+    // Always create a new tab for automation
+    automationTab = await chrome.tabs.create({
+      url: 'https://www.linkedin.com/jobs',
+      active: true
+    });
 
-    // Navigate to LinkedIn Jobs if needed
-    await navigateToLinkedInJobs(automationTab.id);
+    log('Created new tab:', automationTab.id);
 
     // Wait for navigation to complete
     await new Promise(r => setTimeout(r, 3000));
@@ -51,74 +62,6 @@ async function handleStartAutomation(data, sendResponse) {
   } catch (error) {
     log('Error in handleStartAutomation:', error);
     sendResponse({ success: false, message: error.message });
-  }
-}
-
-async function getCurrentOrCreateTab() {
-  try {
-    // First try to find an existing LinkedIn tab
-    const linkedInTabs = await chrome.tabs.query({
-      url: ["*://*.linkedin.com/*"]
-    });
-
-    if (linkedInTabs.length > 0) {
-      // Use the first LinkedIn tab found
-      const tab = linkedInTabs[0];
-      await chrome.tabs.update(tab.id, { active: true });
-      return tab;
-    }
-
-    // If no LinkedIn tab exists, check for active tab
-    const [activeTab] = await chrome.tabs.query({
-      active: true,
-      lastFocusedWindow: true
-    });
-
-    if (activeTab) {
-      return activeTab;
-    }
-
-    // If no suitable tab found, create a new one
-    log('Creating new tab');
-    return await chrome.tabs.create({
-      url: 'https://www.linkedin.com/jobs',
-      active: true
-    });
-  } catch (error) {
-    log('Error getting/creating tab:', error);
-    throw error;
-  }
-}
-
-async function navigateToLinkedInJobs(tabId) {
-  try {
-    log('Navigating tab:', tabId, 'to LinkedIn Jobs');
-    
-    // First check if we're already on LinkedIn Jobs
-    const tab = await chrome.tabs.get(tabId);
-    if (tab.url.includes('linkedin.com/jobs')) {
-      log('Already on LinkedIn Jobs');
-      return;
-    }
-
-    // Navigate only if needed
-    await chrome.tabs.update(tabId, {
-      url: 'https://www.linkedin.com/jobs'
-    });
-
-    // Wait for the navigation to complete
-    return new Promise((resolve) => {
-      function listener(updatedTabId, info, updatedTab) {
-        if (updatedTabId === tabId && info.status === 'complete') {
-          chrome.tabs.onUpdated.removeListener(listener);
-          resolve();
-        }
-      }
-      chrome.tabs.onUpdated.addListener(listener);
-    });
-  } catch (error) {
-    log('Navigation error:', error);
-    throw error;
   }
 }
 

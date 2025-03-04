@@ -7,10 +7,12 @@
     "activeTab",
     "scripting",
     "tabs",
-    "webNavigation"
+    "webNavigation",
+    "notifications"
   ],
   "host_permissions": [
-    "https://*.linkedin.com/*"
+    "https://*.linkedin.com/*",
+    "http://localhost:*/*"
   ],
   "background": {
     "service_worker": "background.js"
@@ -21,6 +23,10 @@
     {
       "matches": ["https://www.linkedin.com/*"],
       "js": ["config.js", "automation.js"]
+    },
+    {
+      "matches": ["https://*.yourwebsite.com/*", "http://localhost:*/*"],
+      "js": ["content-scripts/webpage-bridge.js"]
     }
   ],
   "web_accessible_resources": [
@@ -28,5 +34,11 @@
       "resources": ["popup.js", "styles.css"],
       "matches": ["<all_urls>"]
     }
-  ]
+  ],
+  "externally_connectable": {
+    "matches": [
+      "http://localhost:*/*",
+      "http://127.0.0.1:*/*"
+    ]
+  }
 }
