@@ -1,4 +1,4 @@
-#root {
+/* #root {
   max-width: 1280px;
   margin: 0 auto;
   padding: 2rem;
@@ -126,3 +126,30 @@ input, select {
   text-decoration: underline;
   margin-left: 0.5rem;
 }
+
+.platform-tabs {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  justify-content: center;
+}
+
+.platform-tab {
+  padding: 0.5rem 1rem;
+  border: 2px solid #0077b5;
+  border-radius: 4px;
+  background: none;
+  color: #0077b5;
+  cursor: pointer;
+  text-transform: capitalize;
+}
+
+.platform-tab.active {
+  background: #0077b5;
+  color: white;
+}
+
+Platform-specific colors */
+/* .linkedin .submit-button { background-color: #0077b5; }
+.indeed .submit-button { background-color: #2557a7; }
+.unstop .submit-button { background-color: #ff6b6b; } */

@@ -3,42 +3,53 @@
   "name": "Job Automation Extension",
   "version": "1.0",
   "permissions": [
-    "storage",
     "activeTab",
     "scripting",
     "tabs",
-    "webNavigation",
-    "notifications"
+    "webNavigation"
   ],
   "host_permissions": [
     "https://*.linkedin.com/*",
+    "https://*.indeed.com/*",
+    "https://unstop.com/*",
     "http://localhost:*/*"
   ],
   "background": {
     "service_worker": "background.js"
   },
-  "action": {
-  },
   "content_scripts": [
     {
-      "matches": ["https://www.linkedin.com/*"],
-      "js": ["config.js", "automation.js"]
+      "matches": [
+        "https://www.linkedin.com/*",
+        "https://www.indeed.com/*",
+        "https://unstop.com/*"
+      ],
+      "js": ["automation/common.js"]
     },
     {
-      "matches": ["https://*.yourwebsite.com/*", "http://localhost:*/*"],
-      "js": ["content-scripts/webpage-bridge.js"]
+      "matches": ["http://localhost:*/*"],
+      "js": ["content-scripts/webpage-bridge.js"],
+      "run_at": "document_start",
+      "all_frames": true
     }
   ],
-  "web_accessible_resources": [
-    {
-      "resources": ["popup.js", "styles.css"],
-      "matches": ["<all_urls>"]
-    }
-  ],
+  "web_accessible_resources": [{
+    "resources": [
+      "automation/linkedin.js",
+      "automation/indeed.js",
+      "automation/unstop.js",
+      "automation/common.js"
+    ],
+    "matches": ["<all_urls>"]
+  }],
+  "action": {
+    "default_popup": "redirect.html"
+  },
   "externally_connectable": {
     "matches": [
       "http://localhost:*/*",
       "http://127.0.0.1:*/*"
-    ]
+    ],
+    "accepts_tls_channel_id": false
   }
 }

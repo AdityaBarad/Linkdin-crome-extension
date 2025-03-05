@@ -1,6 +1,14 @@
-// This script will be injected into the webpage to facilitate communication
+// Send extension detection message
+window.postMessage({
+  type: 'EXTENSION_READY',
+  detected: true
+}, '*');
+
 window.addEventListener('message', async (event) => {
   // Ensure message is from our web app
+  if (event.source !== window) return;
+  if (event.origin !== window.location.origin) return;
+
   if (event.data.type === 'LINKEDIN_AUTOMATION_REQUEST') {
     try {
       const response = await chrome.runtime.sendMessage(event.data.message);
@@ -16,9 +24,3 @@ window.addEventListener('message', async (event) => {
     }
   }
 });
-
-// Notify webpage that extension is present
-window.postMessage({
-  type: 'LINKEDIN_AUTOMATION_EXTENSION_DETECTED',
-  detected: true
-}, '*');

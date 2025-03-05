@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react'
-import './App.css'
+import { useState } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 
-function App() {
+function Dashboard() {
+  const { user } = useAuth();
   const [formData, setFormData] = useState({
+    platform: 'linkedin',
     keywords: '',
     location: '',
     datePosted: '',
@@ -18,53 +20,6 @@ function App() {
     totalApplied: 0
   });
 
-  const [extensionStatus, setExtensionStatus] = useState({
-    detected: false,
-    checking: true
-  });
-
-  useEffect(() => {
-    // Listen for extension detection
-    const handleExtensionDetection = (event) => {
-      if (event.data.type === 'LINKEDIN_AUTOMATION_EXTENSION_DETECTED') {
-        setExtensionStatus({
-          detected: true,
-          checking: false
-        });
-      }
-    };
-
-    // Listen for automation responses
-    const handleAutomationResponse = (event) => {
-      if (event.data.type === 'LINKEDIN_AUTOMATION_RESPONSE') {
-        if (event.data.error) {
-          alert('Error: ' + event.data.error);
-          setProgress(prev => ({ ...prev, isRunning: false }));
-        } else {
-          // Handle successful response
-          console.log('Automation response:', event.data.response);
-        }
-      }
-    };
-
-    window.addEventListener('message', handleExtensionDetection);
-    window.addEventListener('message', handleAutomationResponse);
-
-    // Set timeout to update status if extension isn't detected
-    const timeout = setTimeout(() => {
-      setExtensionStatus(prev => ({
-        ...prev,
-        checking: false
-      }));
-    }, 1000);
-
-    return () => {
-      window.removeEventListener('message', handleExtensionDetection);
-      window.removeEventListener('message', handleAutomationResponse);
-      clearTimeout(timeout);
-    };
-  }, []);
-
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -78,7 +33,6 @@ function App() {
     setProgress(prev => ({ ...prev, isRunning: true }));
 
     try {
-      // Send message through postMessage
       window.postMessage({
         type: 'LINKEDIN_AUTOMATION_REQUEST',
         message: {
@@ -94,25 +48,20 @@ function App() {
   };
 
   return (
-    <div className="container">
-      <h1>LinkedIn Job Automation</h1>
+    <div className="container mx-auto p-4">
+      <h2 className="text-2xl font-bold mb-4">Welcome, {user.email}</h2>
       
-      {extensionStatus.checking ? (
-        <div className="extension-status checking">
-          Checking for LinkedIn Automation Extension...
-        </div>
-      ) : extensionStatus.detected ? (
-        <div className="extension-status installed">
-          ✅ LinkedIn Automation Extension detected
-        </div>
-      ) : (
-        <div className="extension-status not-installed">
-          ❌ LinkedIn Automation Extension not detected. 
-          <a href="YOUR_EXTENSION_STORE_LINK" target="_blank" rel="noopener noreferrer">
-            Click here to install
-          </a>
-        </div>
-      )}
+      <div className="platform-tabs">
+        {['linkedin', 'indeed', 'unstop'].map(platform => (
+          <button
+            key={platform}
+            className={`platform-tab ${formData.platform === platform ? 'active' : ''}`}
+            onClick={() => setFormData(prev => ({ ...prev, platform }))}
+          >
+            {platform.charAt(0).toUpperCase() + platform.slice(1)}
+          </button>
+        ))}
+      </div>
 
       <form onSubmit={handleSubmit} className="form">
         <div className="form-group">
@@ -224,7 +173,7 @@ function App() {
         </div>
       )}
     </div>
-  )
+  );
 }
 
-export default App
+export default Dashboard;
