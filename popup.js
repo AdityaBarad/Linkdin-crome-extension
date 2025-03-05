@@ -1,6 +1,10 @@
 let isAutomationRunning = false;
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Initialize logger
+  Logger.init();
+  Logger.log('Popup initialized');
+
   const startButton = document.getElementById('startButton');
   const stopButton = document.getElementById('stopButton');
   const progress = document.getElementById('progress');
@@ -9,6 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   startButton.addEventListener('click', async (e) => {
     e.preventDefault(); // Prevent default button behavior
+    Logger.log('Start button clicked');
     
     const formData = {
       keywords: document.getElementById('keywords').value,
@@ -23,6 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     try {
       startButton.disabled = true;
+      Logger.log('Sending automation request');
       
       const response = await new Promise((resolve, reject) => {
         chrome.runtime.sendMessage({ 
@@ -30,8 +36,10 @@ document.addEventListener('DOMContentLoaded', () => {
           data: formData 
         }, (response) => {
           if (chrome.runtime.lastError) {
+            Logger.log('Error:', chrome.runtime.lastError);
             reject(chrome.runtime.lastError);
           } else {
+            Logger.log('Response received:', response);
             resolve(response);
           }
         });
@@ -44,6 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
         alert('Failed to start automation: ' + (response?.message || 'Unknown error'));
       }
     } catch (error) {
+      Logger.log('Error:', error.message);
       alert('Error: ' + (error.message || 'Unknown error occurred'));
     } finally {
       startButton.disabled = false;

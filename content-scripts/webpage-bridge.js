@@ -11,7 +11,28 @@ window.addEventListener('message', async (event) => {
 
   if (event.data.type === 'LINKEDIN_AUTOMATION_REQUEST') {
     try {
-      const response = await chrome.runtime.sendMessage(event.data.message);
+      // Validate and sanitize data before sending to extension
+      const data = event.data.message.data;
+      const validatedData = {
+        platform: 'linkedin',
+        keywords: String(data.keywords || '').trim(),
+        location: String(data.location || '').trim(),
+        datePosted: String(data.datePosted || '').trim(),
+        workplaceType: String(data.workplaceType || '').trim(),
+        experience: parseInt(data.experience) || 0,
+        currentSalary: parseInt(data.currentSalary) || 0,
+        expectedSalary: parseInt(data.expectedSalary) || 0,
+        totalJobsToApply: Math.min(Math.max(parseInt(data.totalJobsToApply) || 5, 1), 50)
+      };
+
+      // Log the data being sent to the extension
+      console.log('Sending data to extension:', validatedData);
+
+      const response = await chrome.runtime.sendMessage({
+        action: 'startAutomation',
+        data: validatedData
+      });
+
       window.postMessage({
         type: 'LINKEDIN_AUTOMATION_RESPONSE',
         response: response

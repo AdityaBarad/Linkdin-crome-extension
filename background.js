@@ -1,12 +1,46 @@
 let automationTab = null;
 let windowId = null;
+let lastLogTimestamp = 0;
+const LOG_THROTTLE_MS = 500; // Throttle logs to once per 500ms
 
 function log(...messages) {
+  const now = Date.now();
+  // Throttle frequent logs
+  if (now - lastLogTimestamp < LOG_THROTTLE_MS) {
+    return;
+  }
+  lastLogTimestamp = now;
+
+  // Simple log format
   console.log('Background:', ...messages);
+  
+  // Only forward important logs to content script
+  if (automationTab && !messages[0].includes('Received log request')) {
+    try {
+      chrome.tabs.sendMessage(automationTab.id, {
+        action: 'log',
+        message: messages.join(' ')
+      });
+    } catch (error) {
+      console.error('Error sending log to content script:', error);
+    }
+  }
 }
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  log('Received', request.action, 'request');
+  // Only log non-routine messages
+  if (request.action !== 'log' && request.action !== 'keepAlive') {
+    log('Received', request.action, 'request');
+  }
+
+  if (request.action === 'log') {
+    // Forward important content script logs
+    if (!request.data.includes('Processing field')) {
+      console.log('Content:', request.data);
+    }
+    sendResponse({ received: true });
+    return false;
+  }
 
   if (request.action === 'startAutomation') {
     handleStartAutomation(request.data, sendResponse);

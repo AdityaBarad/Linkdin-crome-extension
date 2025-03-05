@@ -6,6 +6,7 @@
     "activeTab",
     "scripting",
     "tabs",
+    "storage",
     "webNavigation"
   ],
   "host_permissions": [
@@ -38,7 +39,8 @@
       "automation/linkedin.js",
       "automation/indeed.js",
       "automation/unstop.js",
-      "automation/common.js"
+      "automation/common.js",
+      "utils/logger.js"
     ],
     "matches": ["<all_urls>"]
   }],

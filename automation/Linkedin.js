@@ -1,3 +1,20 @@
+const CONFIG = {
+  DEFAULT_VALUES: {
+    phone: '1234567890',
+    zipCode: '10001'
+  },
+  DATE_POSTED_MAP: {
+    'r86400': '24h',
+    'r604800': 'week',
+    'r2592000': 'month'
+  },
+  WORKPLACE_TYPE_MAP: {
+    '1': 'onsite',
+    '3': 'remote',
+    '2': 'hybrid'
+  }
+};
+
 let totalApplied = 0;
 let isRunning = false;
 
@@ -105,21 +122,14 @@ async function searchJobs(data) {
     await simulateEnterKey(locationInput);
         await new Promise(r => setTimeout(r, 500));
 
-    // // Updated selectors for job results list
-    // const resultSelectors = [
-    //   '.scaffold-layout__list'
-    // ];
+    // Wait for initial search results
+    await new Promise(r => setTimeout(r, 2000));
 
-    // logToBackground('Content: Waiting for search results...');
-    
-    // // Wait for job list and first job card
-    // const jobList = await waitForAnyElement(resultSelectors, 100);
-    // await new Promise(r => setTimeout(r, 500));
-
-    // Try to find and click the Easy Apply filter
-    logToBackground('Content: Looking for Easy Apply filter');
+    // Click Easy Apply filter with additional selectors
     const easyApplySelectors = [
-      'button[aria-label="Easy Apply filter."]'
+      'button[aria-label="Easy Apply filter."]',
+      'button[aria-label*="Easy Apply"]',
+      'button.jobs-search-box__easy-apply-button'
     ];
 
     const easyApplyButton = await waitForAnyElement(easyApplySelectors, 5000);
@@ -127,167 +137,209 @@ async function searchJobs(data) {
       logToBackground('Content: Clicking Easy Apply filter');
       await easyApplyButton.click();
       await new Promise(r => setTimeout(r, 3000));
-    } else {
-      logToBackground('Content: Easy Apply filter not found');
     }
 
-    // After clicking Easy Apply filter, add date posted filter
+    // Handle date posted filter
     if (data.datePosted) {
-      logToBackground('Content: Applying date posted filter');
-      
-      // Click the date posted filter button
+      const mappedDateValue = {
+        '24h': 'r86400',
+        'week': 'r604800',
+        'month': 'r2592000'
+      }[data.datePosted] || data.datePosted;
+
       const dateFilterButton = await waitForAnyElement([
         '#searchFilter_timePostedRange',
-        'button[aria-label*="Date posted filter"]'
+        'button[aria-label*="Date posted"]',
+        'button[data-test-filters-open-date-posted]'
       ]);
-      
+
       if (dateFilterButton) {
         await dateFilterButton.click();
-        logToBackground('Content: date button clicked');
         await new Promise(r => setTimeout(r, 1000));
 
-        // Select the appropriate radio button
-        const dateRadio = await waitForElement(`#timePostedRange-${data.datePosted}`);
-        if (dateRadio) {
-          await dateRadio.click();
-          await new Promise(r => setTimeout(r, 1000));
-
-          // Find and click the "Show results" button with valid selectors
-          const showResultsSelectors = [
-            'button[aria-label="Apply current filter to show results"]',
-            '.artdeco-button--primary.ml2[type="button"]',
-            '.artdeco-button--2.artdeco-button--primary',
-            'button.artdeco-button--primary:not([aria-label*="filter"])'
-          ];
-
-          // Look for any button containing "Show results" text
-          const allButtons = document.querySelectorAll('button');
-          const showResultsButton = Array.from(allButtons).find(button => 
-            button.textContent.trim().toLowerCase().includes('show results')
-          ) || await waitForAnyElement(showResultsSelectors);
-
-          if (showResultsButton) {
-            logToBackground('Content: Clicking Show results button');
-            await showResultsButton.click();
-            await new Promise(r => setTimeout(r, 2000));
-          } else {
-            logToBackground('Content: Show results button not found');
-          }
-        } else {
-          logToBackground('Content: Date filter option not found');
-        }
-      } else {
-        logToBackground('Content: Date filter button not found');
-      }
-    }
-
-    // Add workplace type filter
-    if (data.workplaceTypes && data.workplaceTypes.length > 0) {
-      logToBackground('Content: Applying workplace type filter');
-      
-      // Click the workplace type filter button
-      const workplaceFilterButton = await waitForAnyElement([
-        '#searchFilter_workplaceType',
-        'button[aria-label*="Remote filter"]'
-      ]);
-      
-      if (workplaceFilterButton) {
-        await workplaceFilterButton.click();
-        await new Promise(r => setTimeout(r, 1000));
-
-        // Select the chosen workplace types
-        for (const workplaceType of data.workplaceTypes) {
-          const checkbox = await waitForElement(`#workplaceType-${workplaceType}`);
-          if (checkbox && !checkbox.checked) {
-            await checkbox.click();
-            await new Promise(r => setTimeout(r, 500));
-          }
-        }
-
-        // Click the "Show results" button
-        const showResultsButton = await waitForAnyElement([
-          'button[aria-label="Apply current filter to show results"]',
-          '.artdeco-button--primary.ml2[type="button"]',
-          'button.artdeco-button--primary:not([aria-label*="filter"])'
-        ]);
-
-        if (showResultsButton) {
-          logToBackground('Content: Clicking Show results button for workplace filter');
-          await showResultsButton.click();
-          await new Promise(r => setTimeout(r, 2000));
-        }
-      }
-    }
-
-    // Add workplace type filter after date filter
-    if (data.workplaceType) {
-      logToBackground('Content: Applying workplace type filter');
-      
-      // Click the workplace type filter button
-      const workplaceFilterButton = await waitForAnyElement([
-        '#searchFilter_workplaceType',
-        'button[aria-label*="Remote filter"]',
-        'button[aria-label*="Workplace"]'
-      ]);
-      
-      if (workplaceFilterButton) {
-        await workplaceFilterButton.click();
-        await new Promise(r => setTimeout(r, 2000)); // Increased delay
-
-        // Try multiple selectors for the workplace options
-        const workplaceSelectors = [
-          `#workplaceType-${data.workplaceType}`,
-          `input[name="remote-filter-value"][value="${data.workplaceType}"]`,
-          `input[value="${data.workplaceType}"].search-reusables__select-input`
+        // Try multiple ways to find date option
+        const dateOptionSelectors = [
+          `#timePostedRange-${mappedDateValue}`,
+          `input[value="${mappedDateValue}"]`,
+          `[data-test-time-filter-value="${mappedDateValue}"]`
         ];
 
-        let workplaceOption = null;
-        for (const selector of workplaceSelectors) {
-          workplaceOption = await waitForElement(selector, 5000).catch(() => null);
-          if (workplaceOption) break;
+        let dateOptionFound = false;
+        for (const selector of dateOptionSelectors) {
+          try {
+            const option = await waitForElement(selector, 2000);
+            if (option) {
+              await option.click();
+              dateOptionFound = true;
+              break;
+            }
+          } catch (error) {
+            continue;
+          }
         }
 
-        if (workplaceOption) {
-          logToBackground('Content: Found workplace option');
-          await workplaceOption.click();
-          await new Promise(r => setTimeout(r, 1000));
+        if (!dateOptionFound) {
+          // Try finding by text content
+          const options = document.querySelectorAll('input[type="radio"], [role="radio"]');
+          for (const option of options) {
+            const text = option.textContent || option.value || option.getAttribute('aria-label') || '';
+            if (text.toLowerCase().includes(data.datePosted.toLowerCase())) {
+              await option.click();
+              dateOptionFound = true;
+              break;
+            }
+          }
+        }
 
-          // Use the new function to find and click the show results button
+        if (dateOptionFound) {
           const showResultsButton = await findShowResultsButton();
-          
           if (showResultsButton) {
-            logToBackground('Content: Clicking Show results button');
             await showResultsButton.click();
             await new Promise(r => setTimeout(r, 2000));
-          } else {
-            logToBackground('Content: Show results button not found, trying alternative approach');
-            // Alternative approach: Press Enter key
-            workplaceOption.focus();
-            await simulateEnterKey(workplaceOption);
           }
-        } else {
-          logToBackground('Content: Workplace option not found');
         }
       }
     }
 
-    // Wait for results with the updated filter
-    logToBackground('Content: Waiting for filtered search results...');
-    await new Promise(r => setTimeout(r, 5000));
+    // Handle workplace type filter with updated selectors
+    if (data.workplaceType) {
+      logToBackground('Content: Waiting for page to settle before workplace filter...');
+      await new Promise(r => setTimeout(r, 3000));
 
-    // Verify results by checking for job cards
+      // Updated workplace filter button selectors
+      const workplaceFilterButton = await waitForAnyElement([
+        'button.search-reusables__filter-pill-button[id="searchFilter_workplaceType"]',
+        'button[aria-label*="Remote filter"]',
+        '.search-reusables__filter-pill-button[aria-label*="workplace"]'
+      ], 10000);
+
+      if (workplaceFilterButton) {
+        logToBackground('Content: Found workplace filter button, preparing to click');
+        await new Promise(r => setTimeout(r, 1000));
+        
+        // Ensure the button is in view
+        await workplaceFilterButton.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        await new Promise(r => setTimeout(r, 2000));
+
+        // Force button to be visible and clickable
+        workplaceFilterButton.style.display = 'block';
+        workplaceFilterButton.style.opacity = '1';
+        await new Promise(r => setTimeout(r, 1000));
+
+        // Try multiple click methods
+        try {
+          // Method 1: Direct click
+          await workplaceFilterButton.click();
+          logToBackground('Content: Clicked workplace filter (direct)');
+        } catch (error) {
+          try {
+            // Method 2: MouseEvent
+            workplaceFilterButton.dispatchEvent(new MouseEvent('click', {
+              bubbles: true,
+              cancelable: true,
+              view: window
+            }));
+            logToBackground('Content: Clicked workplace filter (MouseEvent)');
+          } catch (error) {
+            // Method 3: Focus and Enter key
+            workplaceFilterButton.focus();
+            await simulateEnterKey(workplaceFilterButton);
+            logToBackground('Content: Triggered workplace filter (Enter key)');
+          }
+        }
+
+        // Wait for dropdown to appear
+        await new Promise(r => setTimeout(r, 3000));
+
+        // Try to find and click the workplace option with expanded selectors
+        const workplaceTypeValues = {
+          'onsite': ['On-site', 'Onsite', 'In-office', '1'],
+          'hybrid': ['Hybrid', '2'],
+          'remote': ['Remote', '3']
+        }[data.workplaceType.toLowerCase()] || [];
+
+        let optionFound = false;
+        
+        // Try multiple selector patterns for the option
+        for (const value of workplaceTypeValues) {
+          if (optionFound) break;
+
+          const selectors = [
+            `[type="radio"][value="${value}"]`,
+            `[role="radio"][aria-label*="${value}"]`,
+            `[role="radio"] span:contains("${value}")`,
+            `label:contains("${value}") input[type="radio"]`,
+            `div[role="radiogroup"] div:contains("${value}")`,
+            `.artdeco-hoverable-content [role="presentation"]:contains("${value}")`,
+            `#artdeco-hoverable-artdeco-gen-52 [role="radio"]:contains("${value}")`
+          ];
+
+          for (const selector of selectors) {
+            try {
+              const option = document.querySelector(selector);
+              if (option && option.offsetParent !== null) {
+                await option.scrollIntoView({ behavior: 'smooth' });
+                await new Promise(r => setTimeout(r, 1000));
+                await option.click();
+                optionFound = true;
+                logToBackground('Content: Selected workplace option:', value);
+                break;
+              }
+            } catch (error) {
+              continue;
+            }
+          }
+        }
+
+        // If option wasn't found, try finding by text content
+        if (!optionFound) {
+          const radioButtons = document.querySelectorAll('[role="radio"], input[type="radio"]');
+          for (const radio of radioButtons) {
+            const radioText = radio.textContent || 
+                            radio.value || 
+                            radio.getAttribute('aria-label') || 
+                            radio.parentElement?.textContent || '';
+            
+            if (workplaceTypeValues.some(value => 
+                radioText.toLowerCase().includes(value.toLowerCase()))) {
+              await radio.scrollIntoView({ behavior: 'smooth' });
+              await new Promise(r => setTimeout(r, 1000));
+              await radio.click();
+              optionFound = true;
+              logToBackground('Content: Selected workplace option by text:', radioText);
+              break;
+            }
+          }
+        }
+
+        // Look for and click the Apply/Show Results button
+        if (optionFound) {
+          await new Promise(r => setTimeout(r, 2000));
+          const showResultsButton = await findShowResultsButton();
+          if (showResultsButton) {
+            await showResultsButton.scrollIntoView({ behavior: 'smooth' });
+            await new Promise(r => setTimeout(r, 1000));
+            await showResultsButton.click();
+            await new Promise(r => setTimeout(r, 3000));
+          }
+        }
+      }
+    }
+
+    // Wait for and verify results
+    await new Promise(r => setTimeout(r, 3000));
     const jobCardSelectors = [
       '.job-card-container',
       '.jobs-search-results__list-item',
-      '.ember-view.jobs-search-results__list-item'
+      '.jobs-search-two-pane__job-card-container'
     ];
 
-    const hasJobCards = await waitForAnyElement(jobCardSelectors, 500);
-    if (!hasJobCards) {
-      throw new Error('No Easy Apply job cards found in results');
+    const hasResults = await waitForAnyElement(jobCardSelectors, 5000);
+    if (!hasResults) {
+      throw new Error('No job results found after applying filters');
     }
 
-    logToBackground('Content: Filtered search results found');
+    logToBackground('Content: Search filters applied successfully');
   } catch (error) {
     logToBackground('Content: Error in searchJobs:', error);
     throw error;
