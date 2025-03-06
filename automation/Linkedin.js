@@ -98,104 +98,58 @@ async function navigateToJobs() {
 async function searchJobs(data) {
   logToBackground('Content: Starting job search');
   try {
-    // Update to use data.keywords and data.location
-    const keywordSelectors = [
-      '[id^="jobs-search-box-keyword-id"]'
-    ];
+    // Handle search input fields
+    const keywordInput = await waitForAnyElement(['[id^="jobs-search-box-keyword-id"]']);
+    const locationInput = await waitForAnyElement(['[id^="jobs-search-box-location-id"]']);
 
-    const locationSelectors = [
-      '[id^="jobs-search-box-location-id"]'
-    ];
-
-    const keywordInput = await waitForAnyElement(keywordSelectors);
-    const locationInput = await waitForAnyElement(locationSelectors);
-
-    // Clear existing values
     await clearField(keywordInput);
     await clearField(locationInput);
-
-    // Type with delay between characters
     await typeIntoField(keywordInput, data.keywords);
-    
     await typeIntoField(locationInput, data.location);
-
     await simulateEnterKey(locationInput);
-        await new Promise(r => setTimeout(r, 500));
-
-    // Wait for initial search results
     await new Promise(r => setTimeout(r, 2000));
 
-    // Click Easy Apply filter with additional selectors
-    const easyApplySelectors = [
+    // Handle Easy Apply filter
+    logToBackground('Content: Looking for Easy Apply filter');
+    const easyApplyButton = await waitForAnyElement([
       'button[aria-label="Easy Apply filter."]',
       'button[aria-label*="Easy Apply"]',
-      'button.jobs-search-box__easy-apply-button'
-    ];
+      '.jobs-search-box__easy-apply-button'
+    ], 5000);
 
-    const easyApplyButton = await waitForAnyElement(easyApplySelectors, 5000);
     if (easyApplyButton) {
       logToBackground('Content: Clicking Easy Apply filter');
       await easyApplyButton.click();
       await new Promise(r => setTimeout(r, 3000));
     }
 
-    // Handle date posted filter
+    // Handle Date Posted filter
     if (data.datePosted) {
-      const mappedDateValue = {
-        '24h': 'r86400',
-        'week': 'r604800',
-        'month': 'r2592000'
-      }[data.datePosted] || data.datePosted;
-
+      logToBackground('Content: Applying date posted filter');
       const dateFilterButton = await waitForAnyElement([
         '#searchFilter_timePostedRange',
-        'button[aria-label*="Date posted"]',
-        'button[data-test-filters-open-date-posted]'
+        'button[aria-label*="Date posted"]'
       ]);
 
       if (dateFilterButton) {
         await dateFilterButton.click();
         await new Promise(r => setTimeout(r, 1000));
 
-        // Try multiple ways to find date option
-        const dateOptionSelectors = [
-          `#timePostedRange-${mappedDateValue}`,
-          `input[value="${mappedDateValue}"]`,
-          `[data-test-time-filter-value="${mappedDateValue}"]`
-        ];
+        const mappedDateValue = {
+          '24h': 'r86400',
+          'week': 'r604800',
+          'month': 'r2592000'
+        }[data.datePosted] || data.datePosted;
 
-        let dateOptionFound = false;
-        for (const selector of dateOptionSelectors) {
-          try {
-            const option = await waitForElement(selector, 2000);
-            if (option) {
-              await option.click();
-              dateOptionFound = true;
-              break;
-            }
-          } catch (error) {
-            continue;
-          }
-        }
+        const dateOption = await waitForElement(`#timePostedRange-${mappedDateValue}`);
+        if (dateOption) {
+          await dateOption.click();
+          await new Promise(r => setTimeout(r, 1000));
 
-        if (!dateOptionFound) {
-          // Try finding by text content
-          const options = document.querySelectorAll('input[type="radio"], [role="radio"]');
-          for (const option of options) {
-            const text = option.textContent || option.value || option.getAttribute('aria-label') || '';
-            if (text.toLowerCase().includes(data.datePosted.toLowerCase())) {
-              await option.click();
-              dateOptionFound = true;
-              break;
-            }
-          }
-        }
-
-        if (dateOptionFound) {
           const showResultsButton = await findShowResultsButton();
           if (showResultsButton) {
             await showResultsButton.click();
-            await new Promise(r => setTimeout(r, 2000));
+            await new Promise(r => setTimeout(r, 5000));
           }
         }
       }
