@@ -672,13 +672,31 @@ async function processApplicationForm(data) {
         const jobDetails = {
           profile_id: data.profile_id,
           job_id: window.location.href.split('/').pop(),
-          job_title: document.querySelector('.jobs-unified-top-card__job-title')?.textContent.trim(),
-          company_name: document.querySelector('.jobs-unified-top-card__company-name')?.textContent.trim(),
+          job_title: document.querySelector('.job-details-jobs-unified-top-card__job-title h1.t-24')?.textContent.trim(),
+          company_name: document.querySelector('.job-details-jobs-unified-top-card__company-name')?.textContent.trim(),
           job_location: document.querySelector('.jobs-unified-top-card__bullet')?.textContent.trim(),
           job_description: document.querySelector('.jobs-description__content')?.textContent.trim(),
           job_url: window.location.href,
-          application_status: 'Applied'
+          application_status: 'Applied',
+          platform: 'linkedin'  // Add this line to include the platform
         };
+
+        // Add fallback selectors if primary ones fail
+        if (!jobDetails.company_name) {
+          // Try alternate company name selector
+          const companyLink = document.querySelector('a[data-test-app-aware-link]');
+          if (companyLink) {
+            jobDetails.company_name = companyLink.textContent.trim();
+          }
+        }
+
+        if (!jobDetails.job_title) {
+          // Try alternate job title selector
+          const titleLink = document.querySelector('.job-details-jobs-unified-top-card__job-title a.ember-view');
+          if (titleLink) {
+            jobDetails.job_title = titleLink.textContent.trim();
+          }
+        }
 
         logToBackground('Content: Collected job details:', jobDetails);
 

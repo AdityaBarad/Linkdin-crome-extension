@@ -45,7 +45,8 @@ CREATE TABLE public.applied_jobs (
   date_applied TIMESTAMPTZ DEFAULT NOW(),
   application_status TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  platform TEXT
 );
 
 -- Disable RLS on applied_jobs
