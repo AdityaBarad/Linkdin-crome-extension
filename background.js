@@ -1,3 +1,5 @@
+importScripts(chrome.runtime.getURL('lib/dbHandler.js'));
+
 let automationTab = null;
 let windowId = null;
 let lastLogTimestamp = 0;
@@ -43,7 +45,22 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 
   if (request.action === 'startAutomation') {
+    log('Starting automation with data:', request.data);
     handleStartAutomation(request.data, sendResponse);
+    return true; // Keep message channel open
+  }
+
+  if (request.action === 'saveJobDetails') {
+    log('Received saveJobDetails request:', request.data);
+    saveJobDetailsToSupabase(request.data)
+      .then(() => {
+        log('Job details saved successfully');
+        sendResponse({ success: true });
+      })
+      .catch((error) => {
+        log('Error saving job details:', error);
+        sendResponse({ success: false, message: error.message });
+      });
     return true; // Keep message channel open
   }
 });
@@ -56,6 +73,7 @@ async function handleStartAutomation(data, sendResponse) {
       unstop: 'https://unstop.com'
     };
 
+    log('Creating new tab for platform:', data.platform);
     automationTab = await chrome.tabs.create({
       url: urls[data.platform],
       active: true
@@ -81,7 +99,7 @@ async function handleStartAutomation(data, sendResponse) {
 
 async function injectAutomationScript(tabId, platform) {
   try {
-    log('Injecting automation scripts');
+    log('Injecting automation scripts into tab:', tabId);
     
     // First inject common utilities
     await chrome.scripting.executeScript({
@@ -95,9 +113,26 @@ async function injectAutomationScript(tabId, platform) {
       files: [`automation/${platform}.js`]
     });
     
-    log('Scripts injected successfully');
+    log('Scripts injected successfully into tab:', tabId);
   } catch (error) {
     log('Injection error:', error);
+    throw error;
+  }
+}
+
+async function saveJobDetailsToSupabase(jobDetails) {
+  log('Saving job details:', jobDetails);
+  try {
+    const { data, error } = await dbHandler.saveJob(jobDetails);
+
+    if (error) {
+      log('Error saving job details:', error);
+      throw error;
+    }
+
+    log('Job details saved:', data);
+  } catch (error) {
+    log('Error in saveJobDetails:', error);
     throw error;
   }
 }

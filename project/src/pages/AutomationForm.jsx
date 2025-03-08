@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FiArrowLeft } from 'react-icons/fi';
+import { useAuth } from '../contexts/AuthContext'; // Add this import
 
 function AutomationForm() {
+  const { user } = useAuth(); // Add this line
   const { platform } = useParams();
   const navigate = useNavigate();
 
@@ -39,6 +41,8 @@ function AutomationForm() {
       // Transform data to match extension's expected format
       const transformedData = {
         ...formData,
+        // Add user's profile ID
+        profile_id: user?.id,
         // Convert datePosted to LinkedIn's format
         datePosted: {
           '24h': 'r86400',

@@ -15,6 +15,7 @@ window.addEventListener('message', async (event) => {
       const data = event.data.message.data;
       const validatedData = {
         platform: 'linkedin',
+        profile_id: data.profile_id, // Add this line
         keywords: String(data.keywords || '').trim(),
         location: String(data.location || '').trim(),
         datePosted: String(data.datePosted || '').trim(),

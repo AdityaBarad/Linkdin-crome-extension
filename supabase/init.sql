@@ -32,3 +32,22 @@ CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
+-- Create a table for applied jobs
+CREATE TABLE public.applied_jobs (
+  id SERIAL PRIMARY KEY,
+  profile_id UUID REFERENCES public.profiles(id),
+  job_id TEXT,
+  job_title TEXT,
+  company_name TEXT,
+  job_location TEXT,
+  job_description TEXT,
+  job_url TEXT,
+  date_applied TIMESTAMPTZ DEFAULT NOW(),
+  application_status TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Disable RLS on applied_jobs
+ALTER TABLE public.applied_jobs DISABLE ROW LEVEL SECURITY;
+

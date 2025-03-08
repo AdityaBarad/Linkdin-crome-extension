@@ -13,7 +13,9 @@
     "https://*.linkedin.com/*",
     "https://*.indeed.com/*",
     "https://unstop.com/*",
-    "http://localhost:*/*"
+    "http://localhost:*/*",
+    "https://your-supabase-url.supabase.co/*",
+    "https://oxidjnzvndeynvwgobzg.supabase.co/*"
   ],
   "background": {
     "service_worker": "background.js"
@@ -40,7 +42,8 @@
       "automation/indeed.js",
       "automation/unstop.js",
       "automation/common.js",
-      "utils/logger.js"
+      "utils/logger.js",
+      "lib/dbHandler.js"
     ],
     "matches": ["<all_urls>"]
   }],

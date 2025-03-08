@@ -22,6 +22,8 @@ function logToBackground(...messages) {
   chrome.runtime.sendMessage({ action: 'log', data: messages.join(' ') });
 }
 
+logToBackground('Content script loaded');
+
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   logToBackground('Content: Received message:', request.action);
   
@@ -665,6 +667,33 @@ async function processApplicationForm(data) {
       if (result.modalClosed) {
         logToBackground('Content: Application completed');
         isCompleted = true;
+
+        // Collect job details
+        const jobDetails = {
+          profile_id: data.profile_id,
+          job_id: window.location.href.split('/').pop(),
+          job_title: document.querySelector('.jobs-unified-top-card__job-title')?.textContent.trim(),
+          company_name: document.querySelector('.jobs-unified-top-card__company-name')?.textContent.trim(),
+          job_location: document.querySelector('.jobs-unified-top-card__bullet')?.textContent.trim(),
+          job_description: document.querySelector('.jobs-description__content')?.textContent.trim(),
+          job_url: window.location.href,
+          application_status: 'Applied'
+        };
+
+        logToBackground('Content: Collected job details:', jobDetails);
+
+        // Send job details to background script
+        chrome.runtime.sendMessage({
+          action: 'saveJobDetails',
+          data: jobDetails
+        }, (response) => {
+          if (response.success) {
+            logToBackground('Content: Job details saved successfully');
+          } else {
+            logToBackground('Content: Error saving job details:', response.message);
+          }
+        });
+
         break;
       } else if (result.clicked) {
         logToBackground('Content: Proceeding to next step');
@@ -700,6 +729,7 @@ async function clickNextOrSubmit() {
     // Check if modal is still open
     const modal = document.querySelector('.jobs-easy-apply-modal');
     if (!modal) {
+      logToBackground('Content: Modal closed unexpectedly');
       return { modalClosed: true, clicked: false };
     }
 
@@ -721,6 +751,7 @@ async function clickNextOrSubmit() {
               spanText.includes('next') || buttonText.includes('continue')) {
             
             try {
+              logToBackground('Content: Clicking button:', buttonText);
               await button.click();
               await new Promise(r => setTimeout(r, 500));
 
@@ -732,12 +763,14 @@ async function clickNextOrSubmit() {
               // Check if the apply modal is still open
               const modalStillOpen = document.querySelector('.jobs-easy-apply-modal');
               if (!modalStillOpen) {
+                logToBackground('Content: Modal closed after clicking button');
                 return { modalClosed: true, clicked: true };
               }
 
               // Check if we moved to a new step (success)
               const hasError = document.querySelector('.artdeco-inline-feedback--error');
               if (!hasError) {
+                logToBackground('Content: Moved to next step successfully');
                 return { modalClosed: false, clicked: true };
               }
             } catch (err) {
@@ -749,6 +782,7 @@ async function clickNextOrSubmit() {
       }
     }
 
+    logToBackground('Content: No clickable next/submit button found');
     return { modalClosed: false, clicked: false };
   } catch (error) {
     logToBackground('Content: Error in clickNextOrSubmit:', error);
