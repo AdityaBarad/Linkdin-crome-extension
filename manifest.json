@@ -3,11 +3,10 @@
   "name": "Job Automation Extension",
   "version": "1.0",
   "permissions": [
-    "activeTab",
-    "scripting",
-    "tabs",
     "storage",
-    "webNavigation"
+    "tabs",
+    "scripting",
+    "activeTab"
   ],
   "host_permissions": [
     "https://*.linkedin.com/*",

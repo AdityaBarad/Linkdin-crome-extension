@@ -3,41 +3,79 @@
 <head>
   <title>LinkedIn Job Automation</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <link href="styles/spinner.css" rel="stylesheet">
+  <style>
+    body {
+      width: 300px;
+      padding: 0;
+      margin: 0;
+      background-color: #f9fafb;
+    }
+    .compact-container {
+      padding: 16px;
+    }
+    /* When only progress is shown, make popup more compact */
+    body.progress-only {
+      width: 320px;
+      height: 300px;
+      overflow: hidden;
+    }
+  </style>
 </head>
-<body class="bg-gray-100 p-4">
-  <div class="container mx-auto max-w-md">
-    <h1 class="text-2xl font-bold mb-4">LinkedIn Job Automation</h1>
+<body class="bg-gray-50">
+  <div class="compact-container">
+    <!-- Form Section -->
+    <div id="formSection" class="form-section">
+      <h1 class="text-xl font-bold mb-4">LinkedIn Job Automation</h1>
     
-    <input type="text" id="keywords" placeholder="Job Keywords" class="w-full mb-2 p-2 rounded">
-    <input type="text" id="location" placeholder="Location" class="w-full mb-2 p-2 rounded">
-    <input type="number" id="experience" placeholder="Years of Experience" class="w-full mb-2 p-2 rounded">
-    <input type="number" id="currentSalary" placeholder="Current Salary/CTC" class="w-full mb-2 p-2 rounded">
-    <input type="number" id="expectedSalary" placeholder="Expected Salary/CTC" class="w-full mb-2 p-2 rounded">
-    <input type="number" id="totalJobsToApply" placeholder="Number of Jobs to Apply" class="w-full mb-2 p-2 rounded">
-    
-    <!-- Date posted dropdown -->
-    <select id="datePosted" class="w-full mb-2 p-2 rounded">
-      <option value="">Any time</option>
-      <option value="r2592000">Past month</option>
-      <option value="r604800">Past week</option>
-      <option value="r86400">Past 24 hours</option>
-    </select>
+      <input type="text" id="keywords" placeholder="Job Keywords" class="w-full mb-2 p-2 rounded">
+      <input type="text" id="location" placeholder="Location" class="w-full mb-2 p-2 rounded">
+      <input type="number" id="experience" placeholder="Years of Experience" class="w-full mb-2 p-2 rounded">
+      <input type="number" id="currentSalary" placeholder="Current Salary/CTC" class="w-full mb-2 p-2 rounded">
+      <input type="number" id="expectedSalary" placeholder="Expected Salary/CTC" class="w-full mb-2 p-2 rounded">
+      <input type="number" id="totalJobsToApply" placeholder="Number of Jobs to Apply" class="w-full mb-2 p-2 rounded">
+      
+      <!-- Date posted dropdown -->
+      <select id="datePosted" class="w-full mb-2 p-2 rounded">
+        <option value="">Any time</option>
+        <option value="r2592000">Past month</option>
+        <option value="r604800">Past week</option>
+        <option value="r86400">Past 24 hours</option>
+      </select>
 
-    <!-- Replace multiple select with single select for workplace -->
-    <select id="workplaceType" class="w-full mb-2 p-2 rounded">
-      <option value="">Any workplace</option>
-      <option value="1">On-site</option>
-      <option value="3">Hybrid</option>
-      <option value="2">Remote</option>
-    </select>
+      <!-- Replace multiple select with single select for workplace -->
+      <select id="workplaceType" class="w-full mb-2 p-2 rounded">
+        <option value="">Any workplace</option>
+        <option value="1">On-site</option>
+        <option value="3">Hybrid</option>
+        <option value="2">Remote</option>
+      </select>
 
-    <button id="startButton" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Start Automation</button>
-    <button id="stopButton" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">Stop Automation</button>
-    <div id="progress" class="mt-4 hidden">
-      <div class="bg-gray-200 rounded-full h-4">
-        <div id="progressBar" class="bg-blue-500 h-4 rounded-full" style="width: 0%"></div>
+      <div class="flex space-x-2 mt-4">
+        <button id="startButton" class="flex-1 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Start</button>
+        <button id="stopButton" class="flex-1 bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">Stop</button>
       </div>
-      <p id="progressText" class="text-center mt-2">Applied: 0 jobs</p>
+    </div>
+
+    <!-- Progress Section (hidden by default, shown below form when active) -->
+    <div id="progress" class="hidden mt-4 p-4 bg-white rounded-xl shadow-md">
+      <div class="flex flex-col items-center">
+        <div class="spinner-container">
+          <div class="spinner"></div>
+        </div>
+        <div class="mt-4 text-center">
+          <h3 class="text-xl font-semibold mb-2">Automation in Progress</h3>
+          <p class="text-gray-600 mb-3">Please keep this window open</p>
+          <div class="relative w-full h-4 bg-gray-100 rounded-full overflow-hidden">
+            <div id="progressBar" class="absolute top-0 left-0 h-full bg-gradient-to-r from-blue-500 to-indigo-500 transition-all duration-300" style="width: 0%"></div>
+          </div>
+          <p id="progressText" class="mt-2 text-sm text-gray-600">
+            Applied: <span class="font-semibold text-indigo-600">0</span> 
+            <span class="mx-1">/</span> 
+            <span id="totalJobs" class="font-semibold text-gray-700">0</span> jobs
+          </p>
+        </div>
+      </div>
     </div>
   </div>
   <script src="utils/logger.js"></script>

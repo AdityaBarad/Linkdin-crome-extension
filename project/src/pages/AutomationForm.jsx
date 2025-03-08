@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FiArrowLeft } from 'react-icons/fi';
 import { useAuth } from '../contexts/AuthContext'; // Add this import
+import '../styles/Spinner.css';  // Add this import
 
 function AutomationForm() {
   const { user } = useAuth(); // Add this line
@@ -79,30 +80,79 @@ function AutomationForm() {
   };
 
   useEffect(() => {
-    const handleAutomationResponse = (event) => {
+    const handleMessage = (event) => {
+      console.log("Received message:", event.data);
+      
       if (event.data.type === 'LINKEDIN_AUTOMATION_RESPONSE') {
         if (event.data.error) {
+          console.error("Automation error:", event.data.error);
           alert('Error: ' + event.data.error);
           setProgress(prev => ({ ...prev, isRunning: false }));
-        } else {
-          console.log('Automation response:', event.data.response);
-          setProgress(prev => ({
-            ...prev,
-            totalApplied: event.data.response.totalApplied
-          }));
+        } else if (event.data.response?.success) {
+          console.log("Automation started successfully");
+          setProgress(prev => ({ ...prev, isRunning: true }));
+          // Scroll to the top of the page to see the loader
+          window.scrollTo({ top: 0, behavior: 'smooth' });
         }
+      } 
+      else if (event.data.type === 'LINKEDIN_AUTOMATION_PROGRESS') {
+        console.log("Progress update:", event.data);
+        const applied = event.data.data?.total || 0;
+        const total = event.data.data?.totalJobsToApply || parseInt(formData.totalJobsToApply);
+        
+        setProgress(prev => ({
+          isRunning: true,
+          totalApplied: applied
+        }));
+        
+        // Ensure we're scrolled to the top to see progress
+        if (window.scrollY > 100) {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      }
+      else if (event.data.type === 'LINKEDIN_AUTOMATION_COMPLETE') {
+        console.log("Automation complete:", event.data);
+        setProgress(prev => ({
+          isRunning: false,
+          totalApplied: event.data.data?.totalApplied || prev.totalApplied
+        }));
       }
     };
 
-    window.addEventListener('message', handleAutomationResponse);
-
-    return () => {
-      window.removeEventListener('message', handleAutomationResponse);
-    };
-  }, []);
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [formData.totalJobsToApply]);
 
   return (
     <div className="max-w-2xl mx-auto">
+      {/* Progress Spinner */}
+      {progress.isRunning && (
+        <div className="mb-8 p-6 bg-white rounded-xl shadow-md">
+          <div className="flex flex-col items-center">
+            <div className="spinner-container">
+              <div className="spinner"></div>
+            </div>
+            <div className="mt-4 text-center">
+              <h3 className="text-xl font-semibold mb-2">Automation in Progress</h3>
+              <p className="text-gray-600 mb-3">Please keep this window open</p>
+              <div className="relative w-full h-4 bg-gray-100 rounded-full overflow-hidden">
+                <div 
+                  className="absolute top-0 left-0 h-full bg-gradient-to-r from-blue-500 to-indigo-500 transition-all duration-300"
+                  style={{ 
+                    width: `${(progress.totalApplied / parseInt(formData.totalJobsToApply)) * 100}%`
+                  }}
+                ></div>
+              </div>
+              <p className="mt-2 text-sm text-gray-600">
+                Applied: <span className="font-semibold text-indigo-600">{progress.totalApplied}</span> 
+                <span className="mx-1">/</span> 
+                <span className="font-semibold text-gray-700">{formData.totalJobsToApply}</span> jobs
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center mb-6">
         <button
           onClick={() => navigate('/dashboard/automate')}
@@ -239,7 +289,7 @@ function AutomationForm() {
         </button>
       </form>
 
-      {progress.isRunning && (
+      {/* {progress.isRunning && (
         <div className="progress mt-6">
           <div className="progress-bar">
             <div 
@@ -251,7 +301,7 @@ function AutomationForm() {
           </div>
           <p>Applied: {progress.totalApplied} jobs</p>
         </div>
-      )}
+      )} */}
     </div>
   );
 }

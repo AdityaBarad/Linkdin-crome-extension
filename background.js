@@ -63,27 +63,126 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       });
     return true; // Keep message channel open
   }
+
+  if (request.action === 'resizePopup') {
+    if (windowId) {
+      chrome.windows.update(windowId, {
+        width: request.width,
+        height: request.height
+      });
+    }
+    sendResponse({ success: true });
+    return false;
+  }
+});
+
+// Add this function to broadcast progress updates
+function broadcastProgressUpdate(data) {
+  log('Broadcasting progress update:', data.total, '/', data.totalJobsToApply);
+  
+  // Update extension storage
+  chrome.storage.local.set({
+    jobsApplied: data.total
+  });
+  
+  // Send to popup if open
+  chrome.runtime.sendMessage(data).catch(err => {
+    // Ignore errors when popup is not open
+  });
+  
+  // Send to content script
+  if (automationTab) {
+    // Find and notify the web page bridge
+    chrome.tabs.query({url: "http://localhost:*/*"}, function(tabs) {
+      if (tabs.length > 0) {
+        tabs.forEach(tab => {
+          try {
+            chrome.tabs.sendMessage(tab.id, data);
+          } catch (error) {
+            log('Error sending to tab:', tab.id, error);
+          }
+        });
+      }
+    });
+  }
+}
+
+// Add a dedicated listener for progress updates
+chrome.runtime.onMessage.addListener((request, sender) => {
+  if (request.action === 'updateProgress') {
+    // Add totalJobsToApply if it's missing
+    if (!request.totalJobsToApply) {
+      chrome.storage.local.get(['totalJobsToApply'], (result) => {
+        if (result.totalJobsToApply) {
+          request.totalJobsToApply = result.totalJobsToApply;
+        }
+        broadcastProgressUpdate(request);
+      });
+    } else {
+      broadcastProgressUpdate(request);
+    }
+  }
 });
 
 async function handleStartAutomation(data, sendResponse) {
   try {
+    // Save automation state
+    await chrome.storage.local.set({
+      isAutomationRunning: true,
+      totalJobsToApply: data.totalJobsToApply,
+      jobsApplied: 0,
+      platform: data.platform
+    });
+
+    // Create automation tab first
     const urls = {
       linkedin: 'https://www.linkedin.com/jobs',
       indeed: 'https://www.indeed.com',
       unstop: 'https://unstop.com'
     };
 
-    log('Creating new tab for platform:', data.platform);
     automationTab = await chrome.tabs.create({
       url: urls[data.platform],
       active: true
     });
 
-    log('Created new tab for', data.platform, ':', automationTab.id);
-
+    // Wait for tab to load
     await new Promise(r => setTimeout(r, 3000));
+
+    // Create popup window after tab with compact size for progress view
+    const popup = await chrome.windows.create({
+      url: 'popup.html',
+      type: 'popup',
+      width: 320,
+      height: 300,
+      focused: true
+    });
+    
+    windowId = popup.id;
+
+    // Set up listener for progress updates
+    const progressListener = (request, sender) => {
+      if (request.action === 'updateProgress' && sender.tab?.id === automationTab.id) {
+        // Forward to popup
+        try {
+          chrome.runtime.sendMessage(request);
+        } catch (error) {
+          log('Error forwarding progress:', error);
+        }
+
+        // Update storage
+        chrome.storage.local.set({
+          jobsApplied: request.total
+        });
+      }
+    };
+
+    chrome.runtime.onMessage.addListener(progressListener);
+
+    // Inject scripts
     await injectAutomationScript(automationTab.id, data.platform);
 
+    // Start automation
     const response = await chrome.tabs.sendMessage(automationTab.id, {
       action: 'startAutomation',
       data: data
@@ -91,6 +190,9 @@ async function handleStartAutomation(data, sendResponse) {
 
     log('Received response from content script:', response);
     sendResponse(response);
+
+    // At the end, add this log
+    log('Automation started and settings saved to storage');
   } catch (error) {
     log('Error in handleStartAutomation:', error);
     sendResponse({ success: false, message: error.message });

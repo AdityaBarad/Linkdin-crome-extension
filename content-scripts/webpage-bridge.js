@@ -4,6 +4,7 @@ window.postMessage({
   detected: true
 }, '*');
 
+// Listen for messages from the webpage
 window.addEventListener('message', async (event) => {
   // Ensure message is from our web app
   if (event.source !== window) return;
@@ -15,7 +16,7 @@ window.addEventListener('message', async (event) => {
       const data = event.data.message.data;
       const validatedData = {
         platform: 'linkedin',
-        profile_id: data.profile_id, // Add this line
+        profile_id: data.profile_id,
         keywords: String(data.keywords || '').trim(),
         location: String(data.location || '').trim(),
         datePosted: String(data.datePosted || '').trim(),
@@ -26,7 +27,6 @@ window.addEventListener('message', async (event) => {
         totalJobsToApply: Math.min(Math.max(parseInt(data.totalJobsToApply) || 5, 1), 50)
       };
 
-      // Log the data being sent to the extension
       console.log('Sending data to extension:', validatedData);
 
       const response = await chrome.runtime.sendMessage({
@@ -39,10 +39,41 @@ window.addEventListener('message', async (event) => {
         response: response
       }, '*');
     } catch (error) {
+      console.error('Bridge error:', error);
       window.postMessage({
         type: 'LINKEDIN_AUTOMATION_RESPONSE',
         error: error.message
       }, '*');
     }
   }
+});
+
+// Listen for messages from the extension
+chrome.runtime.onMessage.addListener((message) => {
+  console.log('Bridge received message from extension:', message);
+  
+  // Forward progress updates to the webpage
+  if (message.action === 'updateProgress') {
+    window.postMessage({
+      type: 'LINKEDIN_AUTOMATION_PROGRESS',
+      data: {
+        total: message.total,
+        totalJobsToApply: message.totalJobsToApply
+      }
+    }, '*');
+    return true;
+  }
+  
+  // Forward completion messages to the webpage
+  if (message.action === 'automationComplete') {
+    window.postMessage({
+      type: 'LINKEDIN_AUTOMATION_COMPLETE',
+      data: {
+        totalApplied: message.total
+      }
+    }, '*');
+    return true;
+  }
+  
+  return false;
 });

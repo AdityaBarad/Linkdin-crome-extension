@@ -117,7 +117,7 @@ async function searchJobs(data) {
       'button[aria-label="Easy Apply filter."]',
       'button[aria-label*="Easy Apply"]',
       '.jobs-search-box__easy-apply-button'
-    ], 5000);
+    ], 10000);
 
     if (easyApplyButton) {
       logToBackground('Content: Clicking Easy Apply filter');
@@ -327,10 +327,17 @@ async function applyToJobs(data) {
         
         await processJobCard(currentCard, data);
         totalApplied++;
-        chrome.runtime.sendMessage({
-          action: 'updateProgress',
-          total: totalApplied
-        });
+        
+        // Simplify progress reporting
+        try {
+          chrome.runtime.sendMessage({
+            action: 'updateProgress',
+            total: totalApplied,
+            totalJobsToApply: data.totalJobsToApply
+          });
+        } catch (error) {
+          logToBackground('Content: Error reporting progress:', error.message);
+        }
       } catch (error) {
         logToBackground('Content: Error processing job card:', error);
         // Continue to next card even if current one fails
@@ -350,7 +357,29 @@ async function applyToJobs(data) {
     } else {
       break;
     }
+    
+    // Update progress after each successful application
+    chrome.runtime.sendMessage({
+      action: 'updateProgress',
+      total: totalApplied,
+      totalJobsToApply: data.totalJobsToApply
+    });
+
+    // Send update through webpage bridge
+    window.postMessage({
+      type: 'LINKEDIN_AUTOMATION_PROGRESS',
+      data: {
+        total: totalApplied,
+        totalJobsToApply: data.totalJobsToApply
+      }
+    }, '*');
   }
+
+  // Send completion message
+  chrome.runtime.sendMessage({
+    action: 'automationComplete',
+    total: totalApplied
+  });
 }
 
 async function processJobCard(jobCard, data) {
