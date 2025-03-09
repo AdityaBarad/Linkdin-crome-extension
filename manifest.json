@@ -13,6 +13,7 @@
     "https://*.indeed.com/*",
     "https://unstop.com/*",
     "https://internshala.com/*",
+    "https://*.naukri.com/*",
     "http://localhost:*/*",
     "https://your-supabase-url.supabase.co/*",
     "https://oxidjnzvndeynvwgobzg.supabase.co/*"
@@ -26,7 +27,8 @@
         "https://www.linkedin.com/*",
         "https://www.indeed.com/*",
         "https://unstop.com/*",
-        "https://internshala.com/*"
+        "https://internshala.com/*",
+        "https://*.naukri.com/*"
       ],
       "js": ["automation/common.js"]
     },
@@ -43,6 +45,7 @@
       "automation/indeed.js",
       "automation/unstop.js",
       "automation/internshala.js",
+      "automation/naukri.js",
       "automation/common.js",
       "utils/logger.js",
       "lib/dbHandler.js"

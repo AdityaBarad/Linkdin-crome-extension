@@ -173,21 +173,24 @@ function AutomationForm() {
         'LINKEDIN_AUTOMATION_RESPONSE',
         'INTERNSHALA_AUTOMATION_RESPONSE',
         'INDEED_AUTOMATION_RESPONSE',
-        'UNSTOP_AUTOMATION_RESPONSE'
+        'UNSTOP_AUTOMATION_RESPONSE',
+        'NAUKRI_AUTOMATION_RESPONSE'
       ];
       
       const progressTypes = [
         'LINKEDIN_AUTOMATION_PROGRESS',
         'INTERNSHALA_AUTOMATION_PROGRESS',
         'INDEED_AUTOMATION_PROGRESS',
-        'UNSTOP_AUTOMATION_PROGRESS'
+        'UNSTOP_AUTOMATION_PROGRESS',
+        'NAUKRI_AUTOMATION_PROGRESS'
       ];
       
       const completeTypes = [
         'LINKEDIN_AUTOMATION_COMPLETE',
         'INTERNSHALA_AUTOMATION_COMPLETE',
         'INDEED_AUTOMATION_COMPLETE',
-        'UNSTOP_AUTOMATION_COMPLETE'
+        'UNSTOP_AUTOMATION_COMPLETE',
+        'NAUKRI_AUTOMATION_COMPLETE'
       ];
       
       if (responseTypes.includes(event.data.type)) {
@@ -325,6 +328,250 @@ function AutomationForm() {
               </div>
               <p className="text-sm text-blue-700">
                 You must be logged in to Internshala in your browser before starting the automation.
+              </p>
+            </div>
+          </div>
+        </>
+      );
+    } else if (platform === 'indeed') {
+      // Indeed-specific fields
+      return (
+        <>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Keywords
+            </label>
+            <input
+              type="text"
+              name="keywords"
+              value={formData.keywords}
+              onChange={handleChange}
+              className="form-input"
+              placeholder="e.g., Software Engineer, React Developer"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Location
+            </label>
+            <input
+              type="text"
+              name="location"
+              value={formData.location}
+              onChange={handleChange}
+              className="form-input"
+              placeholder="e.g., New York, Remote"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Experience (years)
+            </label>
+            <input
+              type="number"
+              name="experience"
+              value={formData.experience}
+              onChange={handleChange}
+              className="form-input"
+              placeholder="e.g., 2"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Current Salary
+              </label>
+              <input
+                type="text"
+                name="currentSalary"
+                value={formData.currentSalary}
+                onChange={handleChange}
+                className="form-input"
+                placeholder="e.g., 75000"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Expected Salary
+              </label>
+              <input
+                type="text"
+                name="expectedSalary"
+                value={formData.expectedSalary}
+                onChange={handleChange}
+                className="form-input"
+                placeholder="e.g., 90000"
+              />
+            </div>
+          </div>
+
+          <div className="p-4 bg-blue-50 rounded-lg mb-2">
+            <div className="flex items-center">
+              <div className="text-blue-500 mr-3">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="16" x2="12" y2="12"></line>
+                  <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+              </div>
+              <p className="text-sm text-blue-700">
+                This is a demonstration of basic Indeed navigation. No actual applications will be submitted.
+              </p>
+            </div>
+          </div>
+        </>
+      );
+    } else if (platform === 'naukri') {
+      // Naukri-specific fields
+      return (
+        <>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Keywords
+            </label>
+            <input
+              type="text"
+              name="keywords"
+              value={formData.keywords}
+              onChange={handleChange}
+              className="form-input"
+              placeholder="e.g., Software Engineer, React Developer"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Location
+            </label>
+            <input
+              type="text"
+              name="location"
+              value={formData.location}
+              onChange={handleChange}
+              className="form-input"
+              placeholder="e.g., Bangalore, Delhi, Remote"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Experience (years)
+            </label>
+            <input
+              type="number"
+              name="experience"
+              value={formData.experience}
+              onChange={handleChange}
+              className="form-input"
+              placeholder="e.g., 2"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Current Salary
+              </label>
+              <input
+                type="text"
+                name="currentSalary"
+                value={formData.currentSalary}
+                onChange={handleChange}
+                className="form-input"
+                placeholder="e.g., 750000"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Expected Salary
+              </label>
+              <input
+                type="text"
+                name="expectedSalary"
+                value={formData.expectedSalary}
+                onChange={handleChange}
+                className="form-input"
+                placeholder="e.g., 900000"
+              />
+            </div>
+          </div>
+
+          <div className="p-4 bg-blue-50 rounded-lg mb-2">
+            <div className="flex items-center">
+              <div className="text-blue-500 mr-3">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="16" x2="12" y2="12"></line>
+                  <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+              </div>
+              <p className="text-sm text-blue-700">
+                This is a demonstration of basic Naukri navigation. No actual applications will be submitted.
+              </p>
+            </div>
+          </div>
+        </>
+      );
+    } else if (platform === 'unstop') {
+      // Unstop-specific fields
+      return (
+        <>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Keywords
+            </label>
+            <input
+              type="text"
+              name="keywords"
+              value={formData.keywords}
+              onChange={handleChange}
+              className="form-input"
+              placeholder="e.g., Software Engineer, Marketing Intern"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Location
+            </label>
+            <input
+              type="text"
+              name="location"
+              value={formData.location}
+              onChange={handleChange}
+              className="form-input"
+              placeholder="e.g., Delhi, Mumbai, Remote"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Experience (years)
+            </label>
+            <input
+              type="number"
+              name="experience"
+              value={formData.experience}
+              onChange={handleChange}
+              className="form-input"
+              placeholder="e.g., 1"
+            />
+          </div>
+
+          <div className="p-4 bg-blue-50 rounded-lg mb-2">
+            <div className="flex items-center">
+              <div className="text-blue-500 mr-3">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="16" x2="12" y2="12"></line>
+                  <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+              </div>
+              <p className="text-sm text-blue-700">
+                This is a demonstration of basic Unstop navigation. No actual applications will be submitted.
               </p>
             </div>
           </div>

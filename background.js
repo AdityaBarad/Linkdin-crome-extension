@@ -181,7 +181,8 @@ async function handleStartAutomation(data, sendResponse) {
       linkedin: 'https://www.linkedin.com/jobs',
       indeed: 'https://www.indeed.com',
       unstop: 'https://unstop.com',
-      internshala: 'https://internshala.com'
+      internshala: 'https://internshala.com',
+      naukri: 'https://www.naukri.com'
     };
 
     automationTab = await chrome.tabs.create({

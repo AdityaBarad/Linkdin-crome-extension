@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { FiLinkedin, FiBriefcase, FiAward, FiBookOpen } from 'react-icons/fi';
+import { FiLinkedin, FiBriefcase, FiAward, FiBookOpen, FiGlobe } from 'react-icons/fi';
 import SubscriptionStatus from '../components/SubscriptionStatus';
 
 function AutomatePage() {
@@ -33,6 +33,13 @@ function AutomatePage() {
       icon: FiBookOpen,
       color: 'from-green-500 to-green-600',
       description: 'Find and apply to internships automatically on Internshala'
+    },
+    {
+      id: 'naukri',
+      name: 'Naukri',
+      icon: FiGlobe,
+      color: 'from-purple-500 to-purple-600',
+      description: 'Search and apply to jobs on Naukri.com'
     }
   ];
 
