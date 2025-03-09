@@ -491,6 +491,44 @@ async function applyToInternships(data) {
     total: totalApplied,
     platform: 'internshala'
   });
+  
+  // Show completion notification on page
+  try {
+    const completionDiv = document.createElement('div');
+    completionDiv.style.position = 'fixed';
+    completionDiv.style.top = '20px';
+    completionDiv.style.left = '50%';
+    completionDiv.style.transform = 'translateX(-50%)';
+    completionDiv.style.padding = '15px 20px';
+    completionDiv.style.backgroundColor = '#d1fae5';
+    completionDiv.style.border = '1px solid #34d399';
+    completionDiv.style.borderRadius = '5px';
+    completionDiv.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
+    completionDiv.style.zIndex = '9999';
+    completionDiv.style.display = 'flex';
+    completionDiv.style.alignItems = 'center';
+    completionDiv.style.justifyContent = 'center';
+    completionDiv.innerHTML = `
+      <div style="margin-right: 10px; color: #059669;">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <path d="M10 0C4.48 0 0 4.48 0 10C0 15.52 4.48 20 10 20C15.52 20 20 15.52 20 10C20 4.48 15.52 0 10 0ZM8 15L3 10L4.41 8.59L8 12.17L15.59 4.58L17 6L8 15Z" fill="currentColor"/>
+        </svg>
+      </div>
+      <div>
+        <p style="margin: 0; font-weight: 600; color: #065f46;">Automation Complete!</p>
+        <p style="margin: 0; font-size: 14px; color: #047857;">Successfully applied to ${totalApplied} internships.</p>
+      </div>
+    `;
+    document.body.appendChild(completionDiv);
+    
+    setTimeout(() => {
+      completionDiv.style.opacity = '0';
+      completionDiv.style.transition = 'opacity 0.5s ease';
+      setTimeout(() => document.body.removeChild(completionDiv), 500);
+    }, 10000);
+  } catch (error) {
+    logToBackground('Error showing completion notification:', error);
+  }
 }
 
 async function processInternshipApplication(data) {

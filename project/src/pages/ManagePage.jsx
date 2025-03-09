@@ -1,40 +1,44 @@
 import { useState, useEffect } from 'react';
+import { FiDownload, FiFilter, FiInfo } from 'react-icons/fi';
+import ApplicationAnalytics from '../components/ApplicationAnalytics';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase } from '../lib/supabaseClient';
-import { FiExternalLink, FiFilter } from 'react-icons/fi';
+import { subscriptionService } from '../lib/supabaseClient';
 
 function ManagePage() {
-  const { user } = useAuth();
-  const [jobs, setJobs] = useState([]);
+  const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('all'); // 'all', 'linkedin', 'indeed', 'unstop'
+  const { user } = useAuth();
+  const [filter, setFilter] = useState('all');
 
   useEffect(() => {
-    fetchJobs();
+    const fetchSessions = async () => {
+      if (!user) return;
+      
+      try {
+        setLoading(true);
+        const { data, error } = await subscriptionService.getAutomationSessions(user.id);
+        
+        if (error) {
+          console.error('Error fetching sessions:', error);
+        } else {
+          setSessions(data || []);
+        }
+      } catch (err) {
+        console.error('Error in fetchSessions:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchSessions();
   }, [user]);
 
-  const fetchJobs = async () => {
-    try {
-      if (!user) return;
+  const filteredSessions = sessions.filter(session => {
+    if (filter === 'all') return true;
+    return session.platform === filter;
+  });
 
-      const { data, error } = await supabase
-        .from('applied_jobs')
-        .select('*')
-        .eq('profile_id', user.id)
-        .order('date_applied', { ascending: false });
-
-      if (error) throw error;
-      setJobs(data || []);
-    } catch (error) {
-      console.error('Error fetching jobs:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const filteredJobs = filter === 'all' 
-    ? jobs 
-    : jobs.filter(job => job.platform === filter);
+  const platforms = [...new Set(sessions.map(s => s.platform))];
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -46,111 +50,121 @@ function ManagePage() {
     });
   };
 
+  const getPlatformColor = (platform) => {
+    const colors = {
+      linkedin: 'bg-blue-100 text-blue-800',
+      indeed: 'bg-purple-100 text-purple-800',
+      internshala: 'bg-green-100 text-green-800',
+      unstop: 'bg-amber-100 text-amber-800'
+    };
+    
+    return colors[platform] || 'bg-gray-100 text-gray-800';
+  };
+
   return (
     <div>
-      <div className="mb-8">
-        <h2 className="text-3xl font-bold mb-2">Applied Jobs</h2>
-        <p className="text-gray-600">Track and manage your job applications</p>
-      </div>
+      <h1 className="text-2xl font-bold mb-6">Manage Automation History</h1>
 
-      <div className="bg-white rounded-xl shadow-md p-6">
-        {/* Filters */}
-        <div className="flex items-center gap-4 mb-6">
-          <div className="flex items-center gap-2">
-            <FiFilter className="text-gray-500" />
-            <span className="text-gray-700">Filter by platform:</span>
+      {/* Analytics Component */}
+      <div className="mb-8">
+        <ApplicationAnalytics />
+      </div>
+      
+      {/* Session History */}
+      <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="p-5 border-b border-gray-200">
+          <div className="flex justify-between items-center">
+            <h2 className="text-lg font-medium text-gray-900">Automation History</h2>
+            
+            <div className="flex space-x-4">
+              <div className="relative">
+                <select
+                  value={filter}
+                  onChange={(e) => setFilter(e.target.value)}
+                  className="block appearance-none bg-white border border-gray-300 hover:border-gray-400 px-4 py-2 pr-8 rounded shadow leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="all">All Platforms</option>
+                  {platforms.map(platform => (
+                    <option key={platform} value={platform}>{platform.charAt(0).toUpperCase() + platform.slice(1)}</option>
+                  ))}
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                  <FiFilter />
+                </div>
+              </div>
+              
+              <button className="flex items-center px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50">
+                <FiDownload className="mr-2" />
+                <span>Export</span>
+              </button>
+            </div>
           </div>
-          <select
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            className="form-select text-sm"
-          >
-            <option value="all">All Platforms</option>
-            <option value="linkedin">LinkedIn</option>
-            <option value="indeed">Indeed</option>
-            <option value="unstop">Unstop</option>
-          </select>
-          <span className="text-sm text-gray-500">
-            {filteredJobs.length} applications found
-          </span>
         </div>
 
-        {/* Table */}
         {loading ? (
-          <div className="text-center py-8">Loading...</div>
-        ) : filteredJobs.length > 0 ? (
+          <div className="p-8 text-center text-gray-500">Loading automation history...</div>
+        ) : filteredSessions.length === 0 ? (
+          <div className="p-8 text-center text-gray-500">
+            <div className="mb-4">
+              <FiInfo className="mx-auto h-12 w-12 text-gray-400" />
+            </div>
+            <p className="text-lg font-medium">No automation history found</p>
+            <p className="mt-1">Start a new automation to see your history here.</p>
+          </div>
+        ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Job Title
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Company
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Platform
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Applied On
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Action
-                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Platform</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Jobs Applied</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {filteredJobs.map((job) => (
-                  <tr key={job.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
-                        {job.job_title}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{job.company_name}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize
-                        ${job.platform === 'linkedin' ? 'bg-blue-100 text-blue-800' : ''}
-                        ${job.platform === 'indeed' ? 'bg-indigo-100 text-indigo-800' : ''}
-                        ${job.platform === 'unstop' ? 'bg-purple-100 text-purple-800' : ''}
-                      `}>
-                        {job.platform}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-500">
-                        {formatDate(job.date_applied)}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        {job.application_status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <a
-                        href={job.job_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-indigo-600 hover:text-indigo-900 inline-flex items-center gap-1"
-                      >
-                        View <FiExternalLink />
-                      </a>
-                    </td>
-                  </tr>
-                ))}
+                {filteredSessions.map((session) => {
+                  // Calculate duration if both start and end timestamps exist
+                  let duration = '-';
+                  if (session.session_start && session.session_end) {
+                    const startTime = new Date(session.session_start).getTime();
+                    const endTime = new Date(session.session_end).getTime();
+                    const durationMs = endTime - startTime;
+                    const minutes = Math.floor(durationMs / 60000);
+                    const seconds = Math.floor((durationMs % 60000) / 1000);
+                    duration = `${minutes}m ${seconds}s`;
+                  }
+                  
+                  return (
+                    <tr key={session.id}>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getPlatformColor(session.platform)}`}>
+                          {session.platform.charAt(0).toUpperCase() + session.platform.slice(1)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {formatDate(session.session_start)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {session.jobs_applied} / {session.jobs_requested}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                          ${session.status === 'completed' ? 'bg-green-100 text-green-800' : 
+                          session.status === 'started' ? 'bg-blue-100 text-blue-800' : 
+                          'bg-red-100 text-red-800'}`}>
+                          {session.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {duration}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
-          </div>
-        ) : (
-          <div className="text-center py-8 text-gray-500">
-            No job applications found
           </div>
         )}
       </div>

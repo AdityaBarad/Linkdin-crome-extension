@@ -7,7 +7,9 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import AutomatePage from './pages/AutomatePage';
 import ManagePage from './pages/ManagePage';
+import JobDetailsPage from './pages/JobDetailsPage';
 import AutomationForm from './pages/AutomationForm';
+import PricingPage from './pages/PricingPage';
 
 function PrivateRoute({ children }) {
   const { user } = useAuth();
@@ -23,6 +25,7 @@ function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/pricing" element={<PricingPage />} />
           <Route 
             path="/dashboard/*" 
             element={
@@ -43,6 +46,7 @@ function App() {
             <Route index element={<Navigate to="/dashboard/automate" replace />} />
             <Route path="automate" element={<AutomatePage />} />
             <Route path="manage" element={<ManagePage />} />
+            <Route path="jobs" element={<JobDetailsPage />} />
           </Route>
         </Routes>
       </BrowserRouter>

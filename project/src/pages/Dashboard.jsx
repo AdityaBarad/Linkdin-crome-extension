@@ -1,10 +1,21 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { FiMenu, FiX, FiHome, FiSettings, FiLogOut, FiBell, FiUser } from 'react-icons/fi';
+import { FiMenu, FiX, FiHome, FiSettings, FiLogOut, FiBell, FiUser, FiCreditCard, FiBriefcase } from 'react-icons/fi';
+import { useAuth } from '../contexts/AuthContext';
 
 function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate('/login');
+    } catch (error) {
+      console.error('Error logging out:', error);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
@@ -22,12 +33,20 @@ function Dashboard() {
             <FiHome size={20} />
             {sidebarOpen && <span>Automate</span>}
           </NavLink>
+          <NavLink to="/dashboard/jobs" className="sidebar-link mb-2">
+            <FiBriefcase size={20} />
+            {sidebarOpen && <span>Applied Jobs</span>}
+          </NavLink>
           <NavLink to="/dashboard/manage" className="sidebar-link mb-2">
             <FiSettings size={20} />
-            {sidebarOpen && <span>Manage</span>}
+            {sidebarOpen && <span>Analytics</span>}
+          </NavLink>
+          <NavLink to="/pricing" className="sidebar-link mb-2">
+            <FiCreditCard size={20} />
+            {sidebarOpen && <span>Subscription</span>}
           </NavLink>
           <button 
-            onClick={() => navigate('/')} 
+            onClick={handleLogout} 
             className="sidebar-link w-full text-left mt-8 text-red-600 hover:bg-red-50"
           >
             <FiLogOut size={20} />
@@ -47,10 +66,10 @@ function Dashboard() {
                 <FiBell size={20} />
                 <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
               </button>
-              <button className="flex items-center space-x-2 p-2 hover:bg-gray-100 rounded-lg">
+              <div className="flex items-center space-x-2 p-2 hover:bg-gray-100 rounded-lg">
                 <FiUser size={20} />
-                {sidebarOpen && <span className="text-sm font-medium">John Doe</span>}
-              </button>
+                {sidebarOpen && <span className="text-sm font-medium">{user?.email || 'User'}</span>}
+              </div>
             </div>
           </div>
         </header>

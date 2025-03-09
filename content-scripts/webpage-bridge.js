@@ -66,8 +66,10 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
     window.postMessage({
       type: `${platformUpper}_AUTOMATION_COMPLETE`,
       data: {
-        totalApplied: request.total,
-        platform: platform
+        totalApplied: request.total || 0,
+        platform: platform,
+        success: true,
+        message: `Successfully applied to ${request.total || 0} jobs!`
       }
     }, '*');
   }

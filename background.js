@@ -83,7 +83,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 });
 
-// Add this function to broadcast progress updates
+// Update the progress tracking and completion notification
 function broadcastProgressUpdate(data) {
   log('Broadcasting progress update:', data.total, '/', data.totalJobsToApply);
   
@@ -91,6 +91,9 @@ function broadcastProgressUpdate(data) {
   chrome.storage.local.set({
     jobsApplied: data.total
   });
+  
+  // Check if automation is complete
+  const isComplete = data.total >= data.totalJobsToApply;
   
   // Send to popup if open
   chrome.runtime.sendMessage(data).catch(err => {
@@ -109,12 +112,39 @@ function broadcastProgressUpdate(data) {
               ...data,
               platform: data.platform || chrome.storage.local.get(['platform'], (result) => result.platform)
             });
+            
+            // If this is a completion update, also send the completion message
+            if (isComplete) {
+              chrome.tabs.sendMessage(tab.id, {
+                action: 'automationComplete',
+                total: data.total,
+                platform: data.platform || chrome.storage.local.get(['platform'], (result) => result.platform)
+              });
+            }
           } catch (error) {
             log('Error sending to tab:', tab.id, error);
           }
         });
       }
     });
+  }
+  
+  // If automation is complete, create a notification
+  if (isComplete) {
+    log('Automation complete! Applied to', data.total, 'jobs');
+    
+    // Show a system notification if possible
+    try {
+      chrome.notifications.create({
+        type: 'basic',
+        iconUrl: 'icon128.png',
+        title: 'Automation Complete',
+        message: `Successfully applied to ${data.total} jobs!`,
+        priority: 2
+      });
+    } catch (error) {
+      log('Failed to create notification:', error);
+    }
   }
 }
 

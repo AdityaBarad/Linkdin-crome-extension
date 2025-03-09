@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { FiLinkedin, FiBriefcase, FiAward, FiBookOpen } from 'react-icons/fi';
+import SubscriptionStatus from '../components/SubscriptionStatus';
 
 function AutomatePage() {
   const navigate = useNavigate();
@@ -37,6 +38,10 @@ function AutomatePage() {
 
   return (
     <div>
+      <div className="mb-8">
+        <SubscriptionStatus />
+      </div>
+    
       <h2 className="text-3xl font-bold mb-2">Choose Platform to Automate</h2>
       <p className="text-gray-600 mb-8">Select a platform to start automating your job applications</p>
       
