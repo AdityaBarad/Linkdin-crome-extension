@@ -12,6 +12,7 @@
     "https://*.linkedin.com/*",
     "https://*.indeed.com/*",
     "https://unstop.com/*",
+    "https://internshala.com/*",
     "http://localhost:*/*",
     "https://your-supabase-url.supabase.co/*",
     "https://oxidjnzvndeynvwgobzg.supabase.co/*"
@@ -24,7 +25,8 @@
       "matches": [
         "https://www.linkedin.com/*",
         "https://www.indeed.com/*",
-        "https://unstop.com/*"
+        "https://unstop.com/*",
+        "https://internshala.com/*"
       ],
       "js": ["automation/common.js"]
     },
@@ -40,6 +42,7 @@
       "automation/linkedin.js",
       "automation/indeed.js",
       "automation/unstop.js",
+      "automation/internshala.js",
       "automation/common.js",
       "utils/logger.js",
       "lib/dbHandler.js"

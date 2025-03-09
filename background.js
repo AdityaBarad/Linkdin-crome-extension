@@ -74,6 +74,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     sendResponse({ success: true });
     return false;
   }
+
+  if (request.action === 'navigateToUrl') {
+    log('Handling navigation request to:', request.url);
+    handleNavigation(sender.tab.id, request.url, request.data);
+    sendResponse({ success: true });
+    return false;
+  }
 });
 
 // Add this function to broadcast progress updates
@@ -97,7 +104,11 @@ function broadcastProgressUpdate(data) {
       if (tabs.length > 0) {
         tabs.forEach(tab => {
           try {
-            chrome.tabs.sendMessage(tab.id, data);
+            // Include platform in the message
+            chrome.tabs.sendMessage(tab.id, {
+              ...data,
+              platform: data.platform || chrome.storage.local.get(['platform'], (result) => result.platform)
+            });
           } catch (error) {
             log('Error sending to tab:', tab.id, error);
           }
@@ -112,9 +123,10 @@ chrome.runtime.onMessage.addListener((request, sender) => {
   if (request.action === 'updateProgress') {
     // Add totalJobsToApply if it's missing
     if (!request.totalJobsToApply) {
-      chrome.storage.local.get(['totalJobsToApply'], (result) => {
+      chrome.storage.local.get(['totalJobsToApply', 'platform'], (result) => {
         if (result.totalJobsToApply) {
           request.totalJobsToApply = result.totalJobsToApply;
+          request.platform = result.platform;
         }
         broadcastProgressUpdate(request);
       });
@@ -138,7 +150,8 @@ async function handleStartAutomation(data, sendResponse) {
     const urls = {
       linkedin: 'https://www.linkedin.com/jobs',
       indeed: 'https://www.indeed.com',
-      unstop: 'https://unstop.com'
+      unstop: 'https://unstop.com',
+      internshala: 'https://internshala.com'
     };
 
     automationTab = await chrome.tabs.create({
@@ -267,3 +280,69 @@ chrome.windows.onRemoved.addListener((removedWindowId) => {
     windowId = null;
   }
 });
+
+async function handleNavigation(tabId, url, data) {
+  try {
+    log('Updating tab to navigate to:', url);
+    
+    // First update the tab URL
+    await chrome.tabs.update(tabId, { url: url });
+    
+    // Set up an event listener for when navigation completes
+    chrome.tabs.onUpdated.addListener(function navigationListener(updatedTabId, changeInfo, tab) {
+      if (updatedTabId === tabId && changeInfo.status === 'complete' && tab.url.includes('internshala.com')) {
+        log('Navigation completed, re-injecting scripts');
+        
+        // Remove this listener once we've handled the navigation
+        chrome.tabs.onUpdated.removeListener(navigationListener);
+        
+        // Wait a bit for page to fully initialize - reduced time for faster response
+        setTimeout(async () => {
+          try {
+            // Re-inject scripts
+            await injectAutomationScript(tabId, 'internshala');
+            
+            // Send a message to continue automation
+            setTimeout(() => {
+              chrome.tabs.sendMessage(tabId, {
+                action: 'navigationComplete',
+                data: data
+              }).catch(err => {
+                log('Error sending navigationComplete message:', err);
+                
+                // If message send fails, try again after a short delay
+                setTimeout(() => {
+                  chrome.tabs.sendMessage(tabId, {
+                    action: 'navigationComplete',
+                    data: data
+                  }).catch(err => {
+                    log('Error sending navigationComplete message (retry):', err);
+                  });
+                }, 2000);
+              });
+            }, 2000); // Reduced delay for faster response
+          } catch (error) {
+            log('Error re-injecting scripts after navigation:', error);
+            
+            // Try to recover with a second attempt
+            setTimeout(async () => {
+              try {
+                await injectAutomationScript(tabId, 'internshala');
+                chrome.tabs.sendMessage(tabId, {
+                  action: 'navigationComplete',
+                  data: data
+                }).catch(err => {
+                  log('Recovery attempt failed:', err);
+                });
+              } catch (retryError) {
+                log('Recovery attempt failed:', retryError);
+              }
+            }, 5000);
+          }
+        }, 1500); // Reduced time to be more responsive
+      }
+    });
+  } catch (error) {
+    log('Error in handleNavigation:', error);
+  }
+}

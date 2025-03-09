@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FiArrowLeft } from 'react-icons/fi';
-import { useAuth } from '../contexts/AuthContext'; // Add this import
-import '../styles/Spinner.css';  // Add this import
+import { useAuth } from '../contexts/AuthContext'; 
+import '../styles/Spinner.css';
 
 function AutomationForm() {
-  const { user } = useAuth(); // Add this line
+  const { user } = useAuth();
   const { platform } = useParams();
   const navigate = useNavigate();
 
@@ -18,7 +18,13 @@ function AutomationForm() {
     experience: '',
     currentSalary: '',
     expectedSalary: '',
-    totalJobsToApply: '5'
+    totalJobsToApply: '5',
+    // Internshala-specific fields
+    email: '',
+    password: '',
+    filters: [],
+    filtersText: '',
+    coverLetter: ''
   });
 
   const [progress, setProgress] = useState({
@@ -39,34 +45,44 @@ function AutomationForm() {
     setProgress(prev => ({ ...prev, isRunning: true }));
 
     try {
-      // Transform data to match extension's expected format
-      const transformedData = {
+      // Transform data based on platform
+      let transformedData = {
         ...formData,
-        // Add user's profile ID
         profile_id: user?.id,
-        // Convert datePosted to LinkedIn's format
-        datePosted: {
-          '24h': 'r86400',
-          'week': 'r604800',
-          'month': 'r2592000'
-        }[formData.datePosted] || formData.datePosted,
-        // Convert workplaceType to LinkedIn's format
-        workplaceType: {
-          'onsite': '1',
-          'hybrid': '3',
-          'remote': '2'
-        }[formData.workplaceType] || formData.workplaceType,
-        // Ensure numeric values
-        experience: parseInt(formData.experience) || 0,
-        currentSalary: parseInt(formData.currentSalary) || 0,
-        expectedSalary: parseInt(formData.expectedSalary) || 0,
-        totalJobsToApply: parseInt(formData.totalJobsToApply) || 5,
-        // Add platform
-        platform: 'linkedin'
+        totalJobsToApply: parseInt(formData.totalJobsToApply) || 5
       };
+      
+      if (platform === 'linkedin') {
+        // LinkedIn-specific transformations
+        transformedData = {
+          ...transformedData,
+          datePosted: {
+            '24h': 'r86400',
+            'week': 'r604800',
+            'month': 'r2592000'
+          }[formData.datePosted] || formData.datePosted,
+          workplaceType: {
+            'onsite': '1',
+            'hybrid': '3',
+            'remote': '2'
+          }[formData.workplaceType] || formData.workplaceType,
+          experience: parseInt(formData.experience) || 0,
+          currentSalary: parseInt(formData.currentSalary) || 0,
+          expectedSalary: parseInt(formData.expectedSalary) || 0
+        };
+      }
+      else if (platform === 'internshala') {
+        // Internshala-specific transformations
+        if (formData.filtersText) {
+          transformedData.filters = formData.filtersText.split(',').map(f => f.trim()).filter(Boolean);
+        }
+      }
 
+      // Use platform-specific message type
+      const messageType = `${platform.toUpperCase()}_AUTOMATION_REQUEST`;
+      
       window.postMessage({
-        type: 'LINKEDIN_AUTOMATION_REQUEST',
+        type: messageType,
         message: {
           action: 'startAutomation',
           data: transformedData
@@ -83,7 +99,29 @@ function AutomationForm() {
     const handleMessage = (event) => {
       console.log("Received message:", event.data);
       
-      if (event.data.type === 'LINKEDIN_AUTOMATION_RESPONSE') {
+      // Make this platform-agnostic by checking for any platform response
+      const responseTypes = [
+        'LINKEDIN_AUTOMATION_RESPONSE',
+        'INTERNSHALA_AUTOMATION_RESPONSE',
+        'INDEED_AUTOMATION_RESPONSE',
+        'UNSTOP_AUTOMATION_RESPONSE'
+      ];
+      
+      const progressTypes = [
+        'LINKEDIN_AUTOMATION_PROGRESS',
+        'INTERNSHALA_AUTOMATION_PROGRESS',
+        'INDEED_AUTOMATION_PROGRESS',
+        'UNSTOP_AUTOMATION_PROGRESS'
+      ];
+      
+      const completeTypes = [
+        'LINKEDIN_AUTOMATION_COMPLETE',
+        'INTERNSHALA_AUTOMATION_COMPLETE',
+        'INDEED_AUTOMATION_COMPLETE',
+        'UNSTOP_AUTOMATION_COMPLETE'
+      ];
+      
+      if (responseTypes.includes(event.data.type)) {
         if (event.data.error) {
           console.error("Automation error:", event.data.error);
           alert('Error: ' + event.data.error);
@@ -95,7 +133,7 @@ function AutomationForm() {
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }
       } 
-      else if (event.data.type === 'LINKEDIN_AUTOMATION_PROGRESS') {
+      else if (progressTypes.includes(event.data.type)) {
         console.log("Progress update:", event.data);
         const applied = event.data.data?.total || 0;
         const total = event.data.data?.totalJobsToApply || parseInt(formData.totalJobsToApply);
@@ -110,7 +148,7 @@ function AutomationForm() {
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }
       }
-      else if (event.data.type === 'LINKEDIN_AUTOMATION_COMPLETE') {
+      else if (completeTypes.includes(event.data.type)) {
         console.log("Automation complete:", event.data);
         setProgress(prev => ({
           isRunning: false,
@@ -122,6 +160,184 @@ function AutomationForm() {
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
   }, [formData.totalJobsToApply]);
+
+  // Platform-specific form fields
+  const renderFormFields = () => {
+    if (platform === 'internshala') {
+      return (
+        <>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Filters (comma separated)
+            </label>
+            <input
+              type="text"
+              name="filtersText"
+              value={formData.filtersText}
+              onChange={handleChange}
+              className="form-input"
+              placeholder="e.g., Engineering, Marketing, Design"
+            />
+            <p className="text-xs text-gray-500 mt-1">Engineering, Marketing, Management, Design, Content, Finance, HR</p>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Cover Letter
+            </label>
+            <textarea
+              name="coverLetter"
+              value={formData.coverLetter}
+              onChange={handleChange}
+              className="form-input min-h-[120px]"
+              placeholder="Your default cover letter text for applications"
+            ></textarea>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Workplace Type
+            </label>
+            <select
+              name="workplaceType"
+              value={formData.workplaceType}
+              onChange={handleChange}
+              className="form-input"
+            >
+              <option value="">Select workplace type</option>
+              <option value="onsite">On-site</option>
+              <option value="remote">Remote</option>
+            </select>
+          </div>
+
+          <div className="p-4 bg-blue-50 rounded-lg mb-2">
+            <div className="flex items-center">
+              <div className="text-blue-500 mr-3">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="16" x2="12" y2="12"></line>
+                  <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+              </div>
+              <p className="text-sm text-blue-700">
+                You must be logged in to Internshala in your browser before starting the automation.
+              </p>
+            </div>
+          </div>
+        </>
+      );
+    } else {
+      // Default LinkedIn/Indeed/Unstop fields
+      return (
+        <>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Keywords
+            </label>
+            <input
+              type="text"
+              name="keywords"
+              value={formData.keywords}
+              onChange={handleChange}
+              className="form-input"
+              placeholder="e.g., Software Engineer, React Developer"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Location
+            </label>
+            <input
+              type="text"
+              name="location"
+              value={formData.location}
+              onChange={handleChange}
+              className="form-input"
+              placeholder="e.g., New York, Remote"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Date Posted
+            </label>
+            <select
+              name="datePosted"
+              value={formData.datePosted}
+              onChange={handleChange}
+              className="form-input"
+            >
+              <option value="">Select date range</option>
+              <option value="24h">Past 24 hours</option>
+              <option value="week">Past week</option>
+              <option value="month">Past month</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Workplace Type
+            </label>
+            <select
+              name="workplaceType"
+              value={formData.workplaceType}
+              onChange={handleChange}
+              className="form-input"
+            >
+              <option value="">Select workplace type</option>
+              <option value="onsite">On-site</option>
+              <option value="hybrid">Hybrid</option>
+              <option value="remote">Remote</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Experience (years)
+            </label>
+            <input
+              type="number"
+              name="experience"
+              value={formData.experience}
+              onChange={handleChange}
+              className="form-input"
+              placeholder="e.g., 2"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Current Salary
+              </label>
+              <input
+                type="text"
+                name="currentSalary"
+                value={formData.currentSalary}
+                onChange={handleChange}
+                className="form-input"
+                placeholder="e.g., 75000"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Expected Salary
+              </label>
+              <input
+                type="text"
+                name="expectedSalary"
+                value={formData.expectedSalary}
+                onChange={handleChange}
+                className="form-input"
+                placeholder="e.g., 90000"
+              />
+            </div>
+          </div>
+        </>
+      );
+    }
+  };
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -164,110 +380,8 @@ function AutomationForm() {
       </div>
 
       <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-md p-6 space-y-6">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Keywords
-          </label>
-          <input
-            type="text"
-            name="keywords"
-            value={formData.keywords}
-            onChange={handleChange}
-            className="form-input"
-            placeholder="e.g., Software Engineer, React Developer"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Location
-          </label>
-          <input
-            type="text"
-            name="location"
-            value={formData.location}
-            onChange={handleChange}
-            className="form-input"
-            placeholder="e.g., New York, Remote"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Date Posted
-          </label>
-          <select
-            name="datePosted"
-            value={formData.datePosted}
-            onChange={handleChange}
-            className="form-input"
-          >
-            <option value="">Select date range</option>
-            <option value="24h">Past 24 hours</option>
-            <option value="week">Past week</option>
-            <option value="month">Past month</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Workplace Type
-          </label>
-          <select
-            name="workplaceType"
-            value={formData.workplaceType}
-            onChange={handleChange}
-            className="form-input"
-          >
-            <option value="">Select workplace type</option>
-            <option value="onsite">On-site</option>
-            <option value="hybrid">Hybrid</option>
-            <option value="remote">Remote</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Experience (years)
-          </label>
-          <input
-            type="number"
-            name="experience"
-            value={formData.experience}
-            onChange={handleChange}
-            className="form-input"
-            placeholder="e.g., 2"
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Current Salary
-            </label>
-            <input
-              type="text"
-              name="currentSalary"
-              value={formData.currentSalary}
-              onChange={handleChange}
-              className="form-input"
-              placeholder="e.g., 75000"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Expected Salary
-            </label>
-            <input
-              type="text"
-              name="expectedSalary"
-              value={formData.expectedSalary}
-              onChange={handleChange}
-              className="form-input"
-              placeholder="e.g., 90000"
-            />
-          </div>
-        </div>
+        {/* Render platform-specific form fields */}
+        {renderFormFields()}
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -288,20 +402,6 @@ function AutomationForm() {
           {progress.isRunning ? 'Automation Running...' : 'Start Automation'}
         </button>
       </form>
-
-      {/* {progress.isRunning && (
-        <div className="progress mt-6">
-          <div className="progress-bar">
-            <div 
-              className="progress-fill"
-              style={{ 
-                width: `${(progress.totalApplied / formData.totalJobsToApply) * 100}%`
-              }}
-            />
-          </div>
-          <p>Applied: {progress.totalApplied} jobs</p>
-        </div>
-      )} */}
     </div>
   );
 }

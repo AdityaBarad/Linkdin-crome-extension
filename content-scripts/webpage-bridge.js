@@ -1,79 +1,86 @@
+// Bridge script that allows communication between the extension and web page
+
+console.log('Webpage bridge loaded');
+
 // Send extension detection message
 window.postMessage({
   type: 'EXTENSION_READY',
   detected: true
 }, '*');
 
-// Listen for messages from the webpage
-window.addEventListener('message', async (event) => {
-  // Ensure message is from our web app
-  if (event.source !== window) return;
-  if (event.origin !== window.location.origin) return;
+// Listen for messages from the web page
+window.addEventListener('message', function(event) {
+  // Only accept messages from the same frame
+  if (event.source !== window) {
+    return;
+  }
 
-  if (event.data.type === 'LINKEDIN_AUTOMATION_REQUEST') {
-    try {
-      // Validate and sanitize data before sending to extension
-      const data = event.data.message.data;
-      const validatedData = {
-        platform: 'linkedin',
-        profile_id: data.profile_id,
-        keywords: String(data.keywords || '').trim(),
-        location: String(data.location || '').trim(),
-        datePosted: String(data.datePosted || '').trim(),
-        workplaceType: String(data.workplaceType || '').trim(),
-        experience: parseInt(data.experience) || 0,
-        currentSalary: parseInt(data.currentSalary) || 0,
-        expectedSalary: parseInt(data.expectedSalary) || 0,
-        totalJobsToApply: Math.min(Math.max(parseInt(data.totalJobsToApply) || 5, 1), 50)
-      };
+  const message = event.data;
 
-      console.log('Sending data to extension:', validatedData);
-
-      const response = await chrome.runtime.sendMessage({
-        action: 'startAutomation',
-        data: validatedData
-      });
-
+  // Handle all automation requests by looking for *_AUTOMATION_REQUEST pattern
+  if (message.type && message.type.endsWith('_AUTOMATION_REQUEST')) {
+    console.log('Bridge received automation request:', message.message);
+    
+    const platform = message.type.split('_')[0].toLowerCase();
+    
+    // Ensure platform is specified in the data
+    if (message.message && message.message.data) {
+      message.message.data.platform = platform;
+    }
+    
+    // Forward to background script
+    chrome.runtime.sendMessage(message.message, function(response) {
+      console.log('Received response from extension:', response);
+      
+      // Forward response back to web page using the same platform prefix
       window.postMessage({
-        type: 'LINKEDIN_AUTOMATION_RESPONSE',
+        type: `${platform.toUpperCase()}_AUTOMATION_RESPONSE`, 
         response: response
       }, '*');
-    } catch (error) {
-      console.error('Bridge error:', error);
-      window.postMessage({
-        type: 'LINKEDIN_AUTOMATION_RESPONSE',
-        error: error.message
-      }, '*');
-    }
+    });
   }
 });
 
-// Listen for messages from the extension
-chrome.runtime.onMessage.addListener((message) => {
-  console.log('Bridge received message from extension:', message);
+// Listen for messages from the extension background script
+chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
+  console.log('Bridge received message from background:', request);
   
-  // Forward progress updates to the webpage
-  if (message.action === 'updateProgress') {
+  // Determine which platform the message is for
+  const platform = request.platform || 'linkedin'; // Default to LinkedIn if not specified
+  const platformUpper = platform.toUpperCase();
+  
+  // Forward progress updates to web page
+  if (request.action === 'updateProgress') {
     window.postMessage({
-      type: 'LINKEDIN_AUTOMATION_PROGRESS',
+      type: `${platformUpper}_AUTOMATION_PROGRESS`,
       data: {
-        total: message.total,
-        totalJobsToApply: message.totalJobsToApply
+        total: request.total,
+        totalJobsToApply: request.totalJobsToApply,
+        platform: platform
       }
     }, '*');
-    return true;
   }
   
-  // Forward completion messages to the webpage
-  if (message.action === 'automationComplete') {
+  // Forward completion notifications to web page
+  else if (request.action === 'automationComplete') {
     window.postMessage({
-      type: 'LINKEDIN_AUTOMATION_COMPLETE',
+      type: `${platformUpper}_AUTOMATION_COMPLETE`,
       data: {
-        totalApplied: message.total
+        totalApplied: request.total,
+        platform: platform
       }
     }, '*');
-    return true;
   }
-  
-  return false;
+
+  // Always send a response to keep the message channel alive if needed
+  sendResponse({ received: true });
 });
+
+// Let the background script know the bridge is active
+chrome.runtime.sendMessage({ action: 'bridgeReady' });
+
+// Send periodic keepalive messages to prevent the service worker from going inactive
+setInterval(() => {
+  chrome.runtime.sendMessage({ action: 'keepAlive' })
+    .catch(err => console.log('Keepalive error (expected if background disconnected):', err));
+}, 15000);

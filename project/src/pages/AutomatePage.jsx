@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { FiLinkedin, FiBriefcase, FiAward } from 'react-icons/fi';
+import { FiLinkedin, FiBriefcase, FiAward, FiBookOpen } from 'react-icons/fi';
 
 function AutomatePage() {
   const navigate = useNavigate();
@@ -25,6 +25,13 @@ function AutomatePage() {
       icon: FiAward,
       color: 'from-blue-600 to-indigo-700',
       description: 'Maximize your opportunities on Unstop with automation'
+    },
+    {
+      id: 'internshala',
+      name: 'Internshala',
+      icon: FiBookOpen,
+      color: 'from-green-500 to-green-600',
+      description: 'Find and apply to internships automatically on Internshala'
     }
   ];
 
